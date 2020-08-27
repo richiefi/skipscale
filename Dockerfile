@@ -2,6 +2,7 @@ FROM ubuntu:latest
 
 ENV WORKER_PROCESSES 16
 ENV SKIPSCALE_CONFIG config.toml
+ENV BIND_ADDR 127.0.0.1:8000
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV LC_ALL C.UTF-8
@@ -49,4 +50,4 @@ COPY . .
 RUN set -ex && LDFLAGS="-L/usr/local/lib" CFLAGS="-I/usr/local/include" pipenv install --deploy --system
 
 EXPOSE 8000
-CMD exec gunicorn skipscale.main:app -w $WORKER_PROCESSES -k uvicorn.workers.UvicornWorker
+CMD exec gunicorn skipscale.main:app --bind $BIND_ADDR --workers $WORKER_PROCESSES --worker-class uvicorn.workers.UvicornWorker
