@@ -49,7 +49,7 @@ Skipscale expects to find a configuration file named `config.toml` in the curren
 
 ## Deployment
 
-Skipscale is intended to be deployed using Docker; the main branch of this repository is automatically built and deployed as the `richiefi/skipscale` image. You can provide a configuration file by building a customized version of the image or by attaching a volume to the container. Specify the path using the `SKIPSCALE_CONFIG` environment variable. For performance, host networking is recommended. Set the bind address using the `BIND_ADDRESS` environment variable.
+Skipscale is intended to be deployed using Docker; the main branch of this repository is automatically built and deployed as the `richiefi/skipscale` image. You can provide a configuration file by building a customized version of the image or by attaching a volume to the container. Specify the path using the `SKIPSCALE_CONFIG` environment variable. For performance, host networking is recommended. Set the bind address using the `BIND_ADDR` environment variable.
 
 ## macOS dependencies (during development)
 
