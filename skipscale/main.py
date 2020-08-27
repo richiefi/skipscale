@@ -2,6 +2,7 @@ import httpx
 import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.applications import Starlette
+from starlette.responses import Response
 from starlette.routing import Route, Mount
 
 from skipscale.config import Config
@@ -11,12 +12,16 @@ from skipscale.scale import scale
 from skipscale.encrypt import encrypt
 from skipscale.planner import planner
 
+async def healthcheck(request):
+    return Response(status_code=200)
+
 routes = [
     Route('/original/{tenant}/{image_uri:path}', original),
     Route('/imageinfo/{tenant}/{image_uri:path}', imageinfo),
     Route('/scale/{tenant}/{image_uri:path}', scale),
     Route('/{tenant}/{image_uri:path}', planner),
     Route('/{tenant}/', encrypt, methods=["POST"]),
+    Route('/', healthcheck)
 ]
 
 app_config = Config()
