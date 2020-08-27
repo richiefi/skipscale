@@ -1,0 +1,24 @@
+# an URL we can use to access the service through a web caching proxy
+# For example:  /usr/local/sbin/varnishd -a localhost:9000 -f varnish-example.vcl
+cache_endpoint = "http://localhost:9000/"
+
+# More specific prefixes must be specified first. Each must end in /.
+app_path_prefixes = [
+    "/images/v1/",
+    "/"
+]
+
+cache_control_override = "public, max-age=2592000" # 30d
+default_quality = 85
+max_pixel_ratio = 2 # provide up to @2x images
+
+[encryption]
+key = "01234567890123456789012345678901" # 32 hex digits (128 bits)
+username = "admin" # these credentials are for the endpoint used to encrypt URLs
+password = "admin"
+url_prefix = "https://images.example.com/images/v1/" # the canonical prefix added to encrypted urls. Must end in /.
+
+[tenants.cover-images]
+origin = "https://storage.example.com/cover-originals/"
+default_quality = 90
+max_pixel_ratio = 3
