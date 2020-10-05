@@ -24,7 +24,7 @@ def encrypt_url(key: bytes, tenant: str, url: str) -> str:
     return base64.urlsafe_b64encode(payload).decode('utf-8').rstrip("=")
 
 def decrypt_url(key: bytes, tenant: str, ciphertext: str) -> str:
-    cipher_bytes = base64.urlsafe_b64decode(ciphertext)
+    cipher_bytes = base64.urlsafe_b64decode(ciphertext + '===') # add back any padding
     nonce = cipher_bytes[:12]
     plaintext = cipher_bytes[12:-4]
     tag = cipher_bytes[-4:]
