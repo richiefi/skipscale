@@ -1,4 +1,5 @@
 FROM ubuntu:latest
+ARG CC=cc
 
 ENV WORKER_PROCESSES 16
 ENV SKIPSCALE_CONFIG config.toml
@@ -32,7 +33,7 @@ RUN tar -xzf $mozjpeg_tag.tar.gz && \
     autoreconf -fiv && \
     cd .. && \
     sh $SRC_DIR/configure && \
-    make install \
+    CC="$CC" make install \
          prefix=/usr/local \
          libdir=/usr/local/lib && \
     ldconfig && \
@@ -47,7 +48,7 @@ WORKDIR /app
 COPY . .
 
 # -- Install dependencies:
-RUN set -ex && LDFLAGS="-L/usr/local/lib" CFLAGS="-I/usr/local/include" pipenv install --deploy --system
+RUN set -ex && CC="$CC" LDFLAGS="-L/usr/local/lib" CFLAGS="-I/usr/local/include" pipenv install --deploy --system
 
 EXPOSE 8000
 CMD exec gunicorn skipscale.main:app --bind $BIND_ADDR --workers $WORKER_PROCESSES --worker-class uvicorn.workers.UvicornWorker
