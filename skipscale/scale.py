@@ -70,6 +70,9 @@ async def scale(request):
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
     
+    if r.status_code > 399:
+        raise HTTPException(r.status_code)
+
     loop = asyncio.get_running_loop()
     fp = await loop.run_in_executor(bg_pool, functools.partial(blocking_scale, r.content, q))
 
