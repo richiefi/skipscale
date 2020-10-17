@@ -32,11 +32,11 @@ for prefix in app_config.app_path_prefixes():
 app = Starlette(routes=final_routes)
 app.state.config = app_config
 
-pool = httpcore.AsyncConnectionPool(http2=app_config.origin_request_http2,
+pool = httpcore.AsyncConnectionPool(http2=app_config.origin_request_http2(),
     max_keepalive_connections=app_config.origin_request_max_keepalive_connections(),
     max_connections=app_config.origin_request_max_connections(),
     local_address=app_config.origin_request_local_address())
-timeout = httpx.Timeout(app_config.origin_request_timeout_seconds, connect=app_config.origin_request_connect_timeout_seconds)
+timeout = httpx.Timeout(app_config.origin_request_timeout_seconds(), connect=app_config.origin_request_connect_timeout_seconds())
 app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=pool)
 
 if app_config.sentry_dsn():
