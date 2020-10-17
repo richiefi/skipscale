@@ -24,7 +24,12 @@ tenant_overrideable_fields = {
 main_fields = {
     schema.Optional('app_path_prefixes'): [schema.And(str, lambda s: s.endswith('/'))], # default ["/"]
     'cache_endpoint': schema.And(str, lambda s: s.endswith('/')),
-    schema.Optional('http2_origin_requests'): bool,
+    schema.Optional('origin_request_connect_timeout_seconds'): float,
+    schema.Optional('origin_request_timeout_seconds'): float,
+    schema.Optional('origin_request_max_keepalive_connections'): int,
+    schema.Optional('origin_request_max_connections'): int,
+    schema.Optional('origin_request_http2'): bool,
+    schema.Optional('origin_request_local_address'): str,
     schema.Optional('sentry_dsn'): str,
     schema.Optional('tenants'): {
         str: tenant_overrideable_fields
@@ -55,10 +60,39 @@ class Config():
     def cache_endpoint(self) -> str:
         return self.validated_config["cache_endpoint"]
 
-    def http2_origin_requests(self) -> bool:
-        if "http2_origin_requests" in self.validated_config:
-            return self.validated_config["http2_origin_requests"]
+    def origin_request_connect_timeout_seconds(self) -> float:
+        if "origin_request_connect_timeout_seconds" in self.validated_config:
+            return self.validated_config["origin_request_connect_timeout_seconds"]
+        return 5.0
+
+    def origin_request_timeout_seconds(self) -> float:
+        if "origin_request_timeout_seconds" in self.validated_config:
+            return self.validated_config["origin_request_timeout_seconds"]
+        return 5.0
+
+    def origin_request_max_keepalive_connections(self) -> Optional[int]:
+        if "origin_request_max_keepalive_connections" in self.validated_config:
+            if self.validated_config["origin_request_max_keepalive_connections"] > 0:
+                return self.validated_config["origin_request_max_keepalive_connections"]
+            return None
+        return 10
+
+    def origin_request_max_connections(self) -> Optional[int]:
+        if "origin_request_max_connections" in self.validated_config:
+            if self.validated_config["origin_request_max_connections"] > 0:
+                return self.validated_config["origin_request_max_connections"]
+            return None
+        return 100
+
+    def origin_request_http2(self) -> bool:
+        if "origin_request_http2" in self.validated_config:
+            return self.validated_config["origin_request_http2"]
         return False
+
+    def origin_request_local_address(self) -> Optional[str]:
+        if "origin_request_local_address" in self.validated_config:
+            return self.validated_config["origin_request_local_address"]
+        return None
 
     def sentry_dsn(self) -> Optional[str]:
         if "sentry_dsn" in self.validated_config:

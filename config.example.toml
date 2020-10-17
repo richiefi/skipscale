@@ -11,7 +11,12 @@ app_path_prefixes = [
 cache_control_override = "public, max-age=2592000" # 30d
 default_quality = 85
 max_pixel_ratio = 2 # provide up to @2x images
-http2_origin_requests = false # global, not overrideable by tenant, default false
+origin_request_connect_timeout_seconds = 5.0 # global, not overrideable by tenant, default is 5 seconds
+origin_request_timeout_seconds = 5.0 # global, not overrideable by tenant, default is 5 seconds
+origin_request_max_keepalive_connections = 10 # global, not overrideable by tenant, default 10, set to 0 for unlimited connections
+origin_request_max_connections = 100 # global, not overrideable by tenant, default 100, set to 0 for unlimited connections
+origin_request_http2 = false # global, not overrideable by tenant, default false
+# origin_request_local_address = "0.0.0.0" # global, not overrideable by tenant, default is unset. Use 0.0.0.0 to force IPv4 requests, :: to force IPv6
 
 [encryption]
 key = "01234567890123456789012345678901" # 32 hex digits (128 bits)
