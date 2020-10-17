@@ -11,6 +11,7 @@ app_path_prefixes = [
 cache_control_override = "public, max-age=2592000" # 30d
 default_quality = 85
 max_pixel_ratio = 2 # provide up to @2x images
+http2_origin_requests = false # global, not overrideable by tenant, default false
 
 [encryption]
 key = "01234567890123456789012345678901" # 32 hex digits (128 bits)

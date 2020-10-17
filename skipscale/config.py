@@ -22,9 +22,10 @@ tenant_overrideable_fields = {
 }
 
 main_fields = {
-    'cache_endpoint': schema.And(str, lambda s: s.endswith('/')),
-    schema.Optional('sentry_dsn'): str,
     schema.Optional('app_path_prefixes'): [schema.And(str, lambda s: s.endswith('/'))], # default ["/"]
+    'cache_endpoint': schema.And(str, lambda s: s.endswith('/')),
+    schema.Optional('http2_origin_requests'): bool,
+    schema.Optional('sentry_dsn'): str,
     schema.Optional('tenants'): {
         str: tenant_overrideable_fields
     }
@@ -46,13 +47,18 @@ class Config():
         else:
             return None          
 
-    def cache_endpoint(self) -> str:
-        return self.validated_config["cache_endpoint"]
-
     def app_path_prefixes(self) -> List[str]:
         if "app_path_prefixes" in self.validated_config:
             return self.validated_config["app_path_prefixes"]
         return ["/"]
+
+    def cache_endpoint(self) -> str:
+        return self.validated_config["cache_endpoint"]
+
+    def http2_origin_requests(self) -> bool:
+        if "http2_origin_requests" in self.validated_config:
+            return self.validated_config["http2_origin_requests"]
+        return False
 
     def sentry_dsn(self) -> Optional[str]:
         if "sentry_dsn" in self.validated_config:

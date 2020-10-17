@@ -31,7 +31,7 @@ for prefix in app_config.app_path_prefixes():
 
 app = Starlette(routes=final_routes)
 app.state.config = app_config
-app.state.httpx_client = httpx.AsyncClient(http2=True) # default timeout is 5 seconds
+app.state.httpx_client = httpx.AsyncClient(http2=app_config.http2_origin_requests()) # default timeout is 5 seconds
 
 if app_config.sentry_dsn():
     sentry_sdk.init(dsn=app_config.sentry_dsn())
