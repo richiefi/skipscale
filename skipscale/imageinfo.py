@@ -1,7 +1,6 @@
 from io import BytesIO
 
 from PIL import Image
-from starlette.exceptions import HTTPException
 from starlette.responses import Response, JSONResponse
 
 from skipscale.exif_transpose import image_transpose_exif
@@ -27,9 +26,6 @@ async def imageinfo(request):
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
     
-    if r.status_code > 399:
-        raise HTTPException(r.status_code)
-
     i = Image.open(BytesIO(r.content))
     original_format = i.format
     i = image_transpose_exif(i)
