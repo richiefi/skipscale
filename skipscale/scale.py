@@ -32,7 +32,7 @@ def blocking_scale(content, q):
     fp = BytesIO()
     i.save(fp, **params)
     fp.seek(0)
-    return fp
+    return fp.read()
 
 bg_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
@@ -77,6 +77,6 @@ async def scale(request):
         return Response(status_code=304, headers=output_headers)
     
     loop = asyncio.get_running_loop()
-    fp = await loop.run_in_executor(bg_pool, functools.partial(blocking_scale, r.content, q))
+    content = await loop.run_in_executor(bg_pool, functools.partial(blocking_scale, r.content, q))
 
-    return StreamingResponse(fp, headers=output_headers, media_type="image/"+q['format'])
+    return Response(content, headers=output_headers, media_type="image/"+q['format'])

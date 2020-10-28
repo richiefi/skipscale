@@ -1,6 +1,5 @@
-from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException
-from starlette.responses import StreamingResponse
+from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
 from skipscale.utils import cache_headers, make_request
@@ -29,10 +28,10 @@ async def original(request):
         span.set_tag("tenant", tenant)
         span.set_tag("origin_url", request_url)
 
-    r = await make_request(request, request_url, stream=True)
+    r = await make_request(request, request_url)
     output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
     if 'content-length' in r.headers:
         output_headers['content-length'] = r.headers['content-length']
-    return StreamingResponse(r.aiter_bytes(), status_code=r.status_code, headers=output_headers, background=BackgroundTask(r.aclose))
+    return Response(r.content, status_code=r.status_code, headers=output_headers)
