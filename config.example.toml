@@ -18,6 +18,9 @@ origin_request_max_connections = 100 # global, not overrideable by tenant, defau
 origin_request_http2 = false # global, not overrideable by tenant, default false
 # origin_request_local_address = "0.0.0.0" # global, not overrideable by tenant, default is unset. Use 0.0.0.0 to force IPv4 requests, :: to force IPv6
 
+# sentry_dsn = "https://…" # enable sentry by configuring a dsn
+# sentry_traces_sample_rate = 0.2 # enable tracing by configuring a sample rate
+
 [encryption]
 key = "01234567890123456789012345678901" # 32 hex digits (128 bits)
 username = "admin" # these credentials are for the endpoint used to encrypt URLs

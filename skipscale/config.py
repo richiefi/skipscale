@@ -31,6 +31,7 @@ main_fields = {
     schema.Optional('origin_request_http2'): bool,
     schema.Optional('origin_request_local_address'): str,
     schema.Optional('sentry_dsn'): str,
+    schema.Optional('sentry_traces_sample_rate'): float,
     schema.Optional('tenants'): {
         str: tenant_overrideable_fields
     }
@@ -97,6 +98,11 @@ class Config():
     def sentry_dsn(self) -> Optional[str]:
         if "sentry_dsn" in self.validated_config:
             return self.validated_config["sentry_dsn"]
+        return None
+
+    def sentry_traces_sample_rate(self) -> Optional[float]:
+        if "sentry_traces_sample_rate" in self.validated_config:
+            return self.validated_config["sentry_traces_sample_rate"]
         return None
 
     def default_quality(self, tenant: str) -> int:

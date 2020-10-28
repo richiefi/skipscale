@@ -40,5 +40,8 @@ timeout = httpx.Timeout(app_config.origin_request_timeout_seconds(), connect=app
 app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=pool)
 
 if app_config.sentry_dsn():
-    sentry_sdk.init(dsn=app_config.sentry_dsn())
+    if app_config.sentry_traces_sample_rate():
+        sentry_sdk.init(dsn=app_config.sentry_dsn(), traces_sample_rate=app_config.sentry_traces_sample_rate())
+    else:
+        sentry_sdk.init(dsn=app_config.sentry_dsn())
     app = SentryAsgiMiddleware(app)
