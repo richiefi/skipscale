@@ -5,6 +5,8 @@ from starlette.responses import StreamingResponse
 from skipscale.urlcrypto import decrypt_url
 from skipscale.utils import cache_headers, make_request
 
+from sentry_sdk import Hub
+
 async def original(request):
     """Return an image from the origin."""
 
@@ -21,6 +23,11 @@ async def original(request):
             request_url = decrypt_url(key, tenant, image_uri.split('.')[0]) # omit file extension from encrypted url
         except:
             raise HTTPException(400)
+    
+    span = Hub.current.scope.span
+    if span is not None:
+        span.set_tag("tenant", tenant)
+        span.set_data("origin_url", request_url)
 
     r = await make_request(request, request_url, stream=True)
     output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)

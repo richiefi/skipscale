@@ -5,6 +5,8 @@ from starlette.responses import Response, RedirectResponse
 from skipscale.planner_math import plan_scale
 from skipscale.utils import cache_url, cache_headers, make_request
 
+from sentry_sdk import Hub
+
 query_schema = Schema({
     Optional('width'): And(Use(int), lambda n: n > 0),
     Optional('height'): And(Use(int), lambda n: n > 0),
@@ -21,6 +23,10 @@ async def planner(request):
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
+
+    span = Hub.current.scope.span
+    if span is not None:
+        span.set_tag("tenant", tenant)
 
     try:
         q = query_schema.validate(dict(request.query_params))

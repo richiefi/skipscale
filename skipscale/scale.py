@@ -11,6 +11,8 @@ from starlette.responses import Response, StreamingResponse
 from skipscale.exif_transpose import image_transpose_exif
 from skipscale.utils import cache_url, cache_headers, make_request
 
+from sentry_sdk import Hub
+
 def blocking_scale(content, q):
     i = Image.open(BytesIO(content))
     original_format = i.format
@@ -48,6 +50,10 @@ async def scale(request):
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
 
+    span = Hub.current.scope.span
+    if span is not None:
+        span.set_tag("tenant", tenant)
+    
     try:
         q = query_schema.validate(dict(request.query_params))
     except:
