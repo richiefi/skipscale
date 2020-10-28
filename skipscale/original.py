@@ -27,7 +27,7 @@ async def original(request):
     span = Hub.current.scope.span
     if span is not None:
         span.set_tag("tenant", tenant)
-        span.set_data("origin_url", request_url)
+        span.set_tag("origin_url", request_url)
 
     r = await make_request(request, request_url, stream=True)
     output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
