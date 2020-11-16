@@ -69,7 +69,9 @@ async def planner(request):
     if (
         (scale_params['width'] == imageinfo['width'] and scale_params['height'] == imageinfo['height'] and scale_params['format'] == imageinfo['format'] and 'quality' not in q)
         or
-        (imageinfo['format'] == "gif" and scale_params['format'] == "gif") # We don't process GIFs unless format conversion is explicitly requested
+        (imageinfo['format'] == "gif" and scale_params['format'] == "gif") # We don't process GIFs or PNGs unless format conversion is explicitly requested
+        or
+        (imageinfo['format'] == "png" and scale_params['format'] == "png")
        ):
         # The request is best served by the original image, so redirect straight to that.
         original_url = cache_url(
