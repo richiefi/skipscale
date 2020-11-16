@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:rolling
 ARG CC=cc
 
 ENV WORKER_PROCESSES 16
@@ -10,10 +10,10 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE 1
 
-ARG mozjpeg_tag=v3.3.1
+ARG mozjpeg_tag=v4.0.0
 
 RUN apt-get update && \
-    apt-get install autoconf automake libtool nasm make pkg-config curl python3.8-dev python3.8-distutils libffi-dev libwebp-dev zlib1g-dev ca-certificates -y --no-install-recommends && \
+    apt-get install cmake libtool nasm make pkg-config curl python3.8-dev python3.8-distutils libffi-dev libpng-dev libwebp-dev zlib1g-dev ca-certificates -y --no-install-recommends && \
     rm -rf /tmp/* && rm -rf /var/cache/apt/archives/*.deb && rm -rf /var/lib/apt/lists/*
 
 RUN curl --silent https://bootstrap.pypa.io/get-pip.py | python3.8
@@ -29,13 +29,8 @@ ADD https://github.com/mozilla/mozjpeg/archive/$mozjpeg_tag.tar.gz ./
 RUN tar -xzf $mozjpeg_tag.tar.gz && \
     rm $mozjpeg_tag.tar.gz && \
     SRC_DIR=$(ls -t1 -d mozjpeg-* | head -n1) && \
-    cd $SRC_DIR && \
-    autoreconf -fiv && \
-    cd .. && \
-    sh $SRC_DIR/configure && \
-    CC="$CC" make install \
-         prefix=/usr/local \
-         libdir=/usr/local/lib && \
+    CC="$CC" cmake -G"Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr/local $SRC_DIR && \
+    CC="$CC" make install && \
     ldconfig && \
     rm -rf /src/*
 
