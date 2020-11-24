@@ -16,7 +16,11 @@ async def healthcheck(request):
     return Response(status_code=200)
 
 routes = [
+    # Used for original images
     Route('/original/{tenant}/{image_uri:path}', original),
+    # Used for reverse-proxying non-image assets
+    Route('/asset/{tenant}/{image_uri:path}', original),
+
     Route('/imageinfo/{tenant}/{image_uri:path}', imageinfo),
     Route('/scale/{tenant}/{image_uri:path}', scale),
     Route('/{tenant}/{image_uri:path}', planner),
@@ -41,7 +45,8 @@ app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=pool)
 
 if app_config.sentry_dsn():
     if app_config.sentry_traces_sample_rate():
-        sentry_sdk.init(dsn=app_config.sentry_dsn(), traces_sample_rate=app_config.sentry_traces_sample_rate())
+        sentry_sdk.init(dsn=app_config.sentry_dsn(),
+                        traces_sample_rate=app_config.sentry_traces_sample_rate())
     else:
         sentry_sdk.init(dsn=app_config.sentry_dsn())
-    app = SentryAsgiMiddleware(app)
+    app.add_middleware(SentryAsgiMiddleware)
