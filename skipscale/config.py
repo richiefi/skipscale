@@ -51,7 +51,7 @@ class Config():
         elif key in self.validated_config:
             return self.validated_config[key]
         else:
-            return None          
+            return None
 
     def app_path_prefixes(self) -> List[str]:
         if "app_path_prefixes" in self.validated_config:
@@ -100,10 +100,10 @@ class Config():
             return self.validated_config["sentry_dsn"]
         return None
 
-    def sentry_traces_sample_rate(self) -> Optional[float]:
+    def sentry_traces_sample_rate(self) -> float:
         if "sentry_traces_sample_rate" in self.validated_config:
             return self.validated_config["sentry_traces_sample_rate"]
-        return None
+        return 1.0
 
     def default_quality(self, tenant: str) -> int:
         default_quality = self._optional_main_optional_tenant(tenant, "default_quality")
@@ -113,7 +113,7 @@ class Config():
 
     def cache_control_override(self, tenant: str) -> int:
         return self._optional_main_optional_tenant(tenant, "cache_control_override")
-    
+
     def max_pixel_ratio(self, tenant: str) -> int:
         return self._optional_main_optional_tenant(tenant, "max_pixel_ratio")
 

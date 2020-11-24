@@ -15,15 +15,15 @@ post_schema = Schema({
     Optional('asset_urls'): [validators.url]
 })
 
-def authenticate(request, tenant):
+def authenticate(request, tenant) -> bool:
     if "Authorization" not in request.headers:
-        return
+        return False
 
     auth = request.headers["Authorization"]
     try:
         scheme, credentials = auth.split()
         if scheme.lower() != 'basic':
-            return
+            return False
         decoded = base64.b64decode(credentials).decode("ascii")
     except (ValueError, UnicodeDecodeError, binascii.Error):
         raise HTTPException(401)
