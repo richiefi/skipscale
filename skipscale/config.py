@@ -103,7 +103,7 @@ class Config():
     def sentry_traces_sample_rate(self) -> float:
         if "sentry_traces_sample_rate" in self.validated_config:
             return self.validated_config["sentry_traces_sample_rate"]
-        return 1.0
+        return 0.0
 
     def default_quality(self, tenant: str) -> int:
         default_quality = self._optional_main_optional_tenant(tenant, "default_quality")
