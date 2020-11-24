@@ -16,7 +16,11 @@ async def healthcheck(request):
     return Response(status_code=200)
 
 routes = [
+    # Used for original images
     Route('/original/{tenant}/{image_uri:path}', original),
+    # Used for News assets
+    Route('/asset/{tenant}/{image_uri:path}', original),
+
     Route('/imageinfo/{tenant}/{image_uri:path}', imageinfo),
     Route('/scale/{tenant}/{image_uri:path}', scale),
     Route('/{tenant}/{image_uri:path}', planner),
