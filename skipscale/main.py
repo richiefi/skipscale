@@ -18,7 +18,7 @@ async def healthcheck(request):
 routes = [
     # Used for original images
     Route('/original/{tenant}/{image_uri:path}', original),
-    # Used for News assets
+    # Used for reverse-proxying non-image assets
     Route('/asset/{tenant}/{image_uri:path}', original),
 
     Route('/imageinfo/{tenant}/{image_uri:path}', imageinfo),
