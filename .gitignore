@@ -1,2 +1,3 @@
 .vscode
+.dir-locals.el
 config.toml
