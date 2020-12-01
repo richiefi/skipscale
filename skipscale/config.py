@@ -2,6 +2,7 @@ import os
 from typing import Any, List, Optional, Tuple, Union
 
 import schema
+import validators
 import toml
 
 config_path = os.getenv('SKIPSCALE_CONFIG', "config.toml")
@@ -19,6 +20,7 @@ tenant_overrideable_fields = {
     schema.Optional('cache_control_override'): str,
     schema.Optional('encryption'): encryption_fields,
     schema.Optional('origin'): str,
+    schema.Optional('proxy'): validators.url,
 }
 
 main_fields = {
@@ -136,4 +138,13 @@ class Config():
         return None
 
     def origin(self, tenant: str) -> Optional[str]:
+        """Returns a fixed origin for the tenant. If not set, the (encrypted)
+        path from the request is used."""
+
         return self._optional_main_optional_tenant(tenant, "origin")
+
+    def proxy(self, tenant: str) -> Optional[str]:
+        """Returns an URL to a tenant-specific HTTP proxy if set. The
+        URL can include basic auth credentials for the proxy."""
+
+        return self._optional_main_optional_tenant(tenant, "proxy")
