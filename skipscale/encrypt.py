@@ -8,6 +8,7 @@ from starlette.responses import JSONResponse
 import validators
 
 from skipscale.urlcrypto import encrypt_url
+from skipscale.config import Config
 
 log = logging.getLogger(__name__)
 post_schema = Schema({
@@ -52,8 +53,9 @@ async def encrypt(request):
     if not key:
         raise HTTPException(400, detail='Missing configuration')
 
-    image_prefix = request.app.state.config.encryption_url_prefix(tenant) + tenant + '/'
-    asset_prefix = request.app.state.config.encryption_url_prefix(tenant) + 'asset/' + tenant + '/'
+    config: Config = request.app.state.config
+    image_prefix = config.encryption_url_prefix(tenant) + tenant + '/'
+    asset_prefix = config.encryption_asset_url_prefix(tenant) + 'asset/' + tenant + '/'
     result = {}
 
     def array_to_result(prefix, orig_urls) -> None:
