@@ -1,7 +1,12 @@
+import logging
 from urllib.parse import urljoin, urlencode
+from typing import Optional
 
-from httpx import RequestError
+from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
+
+log = logging.getLogger(__name__)
+
 
 def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, params=None) -> str:
     app_prefix = urljoin(cache_endpoint, app_path_prefixes[0])
@@ -10,19 +15,38 @@ def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, pa
         url = urljoin(url, '?' + urlencode(params, safe=','))
     return url
 
-async def make_request(incoming_request, outgoing_request_url, stream=False):
+async def make_request(incoming_request, outgoing_request_url,
+                       stream=False,
+                       proxy: Optional[str] = None):
     outgoing_request_headers = {}
     if 'if-modified-since' in incoming_request.headers:
         outgoing_request_headers['if-modified-since'] = incoming_request.headers['if-modified-since']
     if 'if-none-match' in incoming_request.headers:
         outgoing_request_headers['if-none-match'] = incoming_request.headers['if-none-match']
-    req = incoming_request.app.state.httpx_client.build_request("GET", outgoing_request_url, headers=outgoing_request_headers)
+
+    close_client = False
+    client = incoming_request.app.state.httpx_client
+
+    # httpx proxy settings are per-client, if one is set we need to create a new one
+    # instead of using the global instance. This assumes that proxy usage is limited
+    # to test/QA feeds.
+    if proxy:
+        close_client = True
+        client = AsyncClient(timeout=client.timeout, proxies=proxy)
+        log.debug('fetching %s through proxy', outgoing_request_url)
+
+    req = client.build_request("GET", outgoing_request_url, headers=outgoing_request_headers)
     try:
-        r = await incoming_request.app.state.httpx_client.send(req, stream=stream)
+        r = await client.send(req, stream=stream)
     except RequestError:
         raise HTTPException(502)
+    finally:
+        if close_client:
+            await client.aclose()
+
     if r.is_error:
         raise HTTPException(r.status_code)
+
     return r
 
 def cache_headers(cache_control_override, received_response):
