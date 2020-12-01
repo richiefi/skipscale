@@ -11,8 +11,9 @@ async def original(request):
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
+    config = request.app.state.config
 
-    origin = request.app.state.config.origin(tenant)
+    origin = config.origin(tenant)
     if origin:
         request_url = origin + image_uri
     else:
@@ -22,16 +23,17 @@ async def original(request):
             request_url = decrypt_url(key, tenant, image_uri.split('.')[0]) # omit file extension from encrypted url
         except:
             raise HTTPException(400)
-    
+
     span = Hub.current.scope.span
     if span is not None:
         span.set_tag("tenant", tenant)
         span.set_tag("origin_url", request_url)
 
-    r = await make_request(request, request_url)
+    r = await make_request(request, request_url, proxy=config.proxy(tenant))
     output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
-    if 'content-length' in r.headers:
-        output_headers['content-length'] = r.headers['content-length']
+    # Since we're not streaming we know the real length. Upstream content-length may include
+    # content-encoding, which is reversed by httpx.
+    output_headers['content-length'] = str(len(r.content))
     return Response(r.content, status_code=r.status_code, headers=output_headers)
