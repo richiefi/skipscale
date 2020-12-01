@@ -33,6 +33,7 @@ async def original(request):
     output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
-    if 'content-length' in r.headers:
-        output_headers['content-length'] = r.headers['content-length']
+    # Since we're not streaming we know the real length. Upstream content-length may include
+    # content-encoding, which is reversed by httpx.
+    output_headers['content-length'] = str(len(r.content))
     return Response(r.content, status_code=r.status_code, headers=output_headers)
