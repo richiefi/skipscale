@@ -26,8 +26,10 @@ key = "01234567890123456789012345678901" # 32 hex digits (128 bits)
 username = "admin" # these credentials are for the endpoint used to encrypt URLs
 password = "admin"
 url_prefix = "https://images.example.com/images/v1/" # the canonical prefix added to encrypted urls. Must end in /.
+# asset_url_prefix = "https://assets.example.com/assets/v1/" # the canonical prefix added to encrypted asset urls. Defaults to url_prefix.
 
 [tenants.cover-images]
 origin = "https://storage.example.com/cover-originals/"
 default_quality = 90
 max_pixel_ratio = 3
+# proxy = "http://user:pass@my-proxy.example.com:8888/" # if set, uses an upstream proxy for this tenant
