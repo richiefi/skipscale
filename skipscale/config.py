@@ -12,6 +12,7 @@ encryption_fields = {
     'username': str,
     'password': str,
     'url_prefix': schema.And(str, lambda s: s.endswith('/')),
+    schema.Optional('asset_url_prefix'): schema.And(str, lambda s: s.endswith('/')),
 }
 
 tenant_overrideable_fields = {
@@ -42,6 +43,8 @@ main_fields = {
 config_schema = schema.Schema({**main_fields, **tenant_overrideable_fields})
 
 class Config():
+    """Server configuration parsed from a TOML file."""
+
     def __init__(self):
         with open(config_path) as f:
             parsed_config = toml.load(f)
@@ -131,11 +134,22 @@ class Config():
             return encryption["username"], encryption["password"]
         return None
 
-    def encryption_url_prefix(self, tenant: str) -> Optional[bytes]:
+    def encryption_url_prefix(self, tenant: str) -> Optional[str]:
+        """Returns the URL prefix used in encryption POST responses."""
+
         encryption = self._optional_main_optional_tenant(tenant, "encryption")
         if encryption:
             return encryption["url_prefix"]
         return None
+
+    def encryption_asset_url_prefix(self, tenant: str) -> Optional[str]:
+        """Returns the URL prefix used in encryption POST responses for asset
+        (unscaled) URLs. Defaults to the value of `encryption_url_prefix`."""
+
+        encryption = self._optional_main_optional_tenant(tenant, "encryption")
+        if encryption and 'asset_url_prefix' in encryption:
+            return encryption["asset_url_prefix"]
+        return self.encryption_url_prefix(tenant)
 
     def origin(self, tenant: str) -> Optional[str]:
         """Returns a fixed origin for the tenant. If not set, the (encrypted)
