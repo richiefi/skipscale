@@ -4,6 +4,7 @@ from starlette.responses import Response, RedirectResponse
 
 from skipscale.planner_math import plan_scale
 from skipscale.utils import cache_url, cache_headers, make_request
+from skipscale.config import Config
 
 from sentry_sdk import Hub
 
@@ -18,11 +19,13 @@ query_schema = Schema({
     Optional('center-y'): And(Use(float), lambda n: 0.0 <= n <= 1.0),
 }, ignore_extra_keys=True)
 
+
 async def planner(request):
     """Redirect to a canonical url based on the request and the original image dimensions."""
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
+    config: Config = request.app.state.config
 
     span = Hub.current.scope.span
     if span is not None:
@@ -61,8 +64,11 @@ async def planner(request):
     else:
         scale_params['quality'] = request.app.state.config.default_quality(tenant)
 
+    default_format = config.default_format(tenant)
     if 'format' in q:
         scale_params['format'] = q['format']
+    elif default_format:
+        scale_params['format'] = default_format
     else:
         scale_params['format'] = imageinfo['format']
 
