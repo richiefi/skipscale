@@ -1,6 +1,6 @@
 import logging
 from urllib.parse import urljoin, urlencode
-from typing import Optional
+from typing import Optional, Union
 
 from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
@@ -49,7 +49,8 @@ async def make_request(incoming_request, outgoing_request_url,
 
     return r
 
-def cache_headers(cache_control_override, received_response, allow_cors=False):
+def cache_headers(cache_control_override, received_response,
+                  allow_cors: Union[str, bool] = False):
     output_headers = {}
     if 'last-modified' in received_response.headers:
         output_headers['last-modified'] = received_response.headers['last-modified']
@@ -65,7 +66,13 @@ def cache_headers(cache_control_override, received_response, allow_cors=False):
         if 'pragma' in received_response.headers:
             output_headers['pragma'] = received_response.headers['pragma']
     if allow_cors:
-        output_headers['access-control-allow-origin'] = '*'
+        if isinstance(allow_cors, str):
+            output_headers['access-control-allow-origin'] = allow_cors
+        else:
+            output_headers['access-control-allow-origin'] = '*'
+        # MDN says that this is only necessary if ACAO is not *,
+        # but with Varnish it seems to be always necessary.
+        output_headers['vary'] = 'origin'
     return output_headers
 
 def should_allow_cors(request, force_flag: bool):
