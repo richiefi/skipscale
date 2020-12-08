@@ -4,7 +4,7 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
-from skipscale.utils import cache_headers, make_request
+from skipscale.utils import cache_headers, make_request, should_allow_cors
 from skipscale.config import Config
 
 from sentry_sdk import Hub
@@ -44,7 +44,8 @@ async def original(request):
         span.set_tag("origin_url", request_url)
 
     r = await make_request(request, request_url, proxy=config.proxy(tenant))
-    output_headers = cache_headers(config.cache_control_override(tenant), r)
+    output_headers = cache_headers(config.cache_control_override(tenant), r,
+                                   allow_cors=should_allow_cors(request, config.allow_cors(tenant)))
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
     # Since we're not streaming we know the real length.

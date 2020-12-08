@@ -9,7 +9,8 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, StreamingResponse
 
 from skipscale.exif_transpose import image_transpose_exif
-from skipscale.utils import cache_url, cache_headers, make_request
+from skipscale.utils import cache_url, cache_headers, make_request, should_allow_cors
+from skipscale.config import Config
 
 from sentry_sdk import Hub
 
@@ -49,11 +50,12 @@ async def scale(request):
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
+    config: Config = request.app.state.config
 
     span = Hub.current.scope.span
     if span is not None:
         span.set_tag("tenant", tenant)
-    
+
     try:
         q = query_schema.validate(dict(request.query_params))
     except:
@@ -63,19 +65,20 @@ async def scale(request):
         q['crop'] = None
 
     request_url = cache_url(
-        request.app.state.config.cache_endpoint(),
-        request.app.state.config.app_path_prefixes(),
+        config.cache_endpoint(),
+        config.app_path_prefixes(),
         "original",
         tenant,
         image_uri
     )
 
     r = await make_request(request, request_url)
-    output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
+    output_headers = cache_headers(config.cache_control_override(tenant), r,
+                                   allow_cors=should_allow_cors(request, config.allow_cors(tenant)))
 
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
-    
+
     loop = asyncio.get_running_loop()
     content = await loop.run_in_executor(bg_pool, functools.partial(blocking_scale, r.content, q))
 

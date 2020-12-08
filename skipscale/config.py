@@ -28,6 +28,7 @@ tenant_overrideable_fields = {
     schema.Optional('encryption'): encryption_fields,
     schema.Optional('origin'): str,
     schema.Optional('proxy'): validators.url,
+    schema.Optional('force_allow_cors'): bool,
     schema.Optional('strip_regex'): schema.And(str,
                                                lambda s: re.compile(s) is not None)
 }
@@ -181,6 +182,16 @@ class Config():
         URL can include basic auth credentials for the proxy."""
 
         return self._optional_main_optional_tenant(tenant, "proxy")
+
+    def allow_cors(self, tenant: str) -> bool:
+        """Returns True if cross-origin requests should be always allowed for this tenant.
+        Defaults to False."""
+
+        result = self._optional_main_optional_tenant(tenant, "force_allow_cors")
+        if result is None:
+            result = False
+
+        return result
 
     def strip_regex(self, tenant: str):
         """Returns an optional (compiled) regular expression. Matches

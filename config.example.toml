@@ -34,3 +34,4 @@ default_quality = 90
 max_pixel_ratio = 3
 # proxy = "http://user:pass@my-proxy.example.com:8888/" # if set, uses an upstream proxy for this tenant
 # default_format = "jpeg" # if set, images are converted to this format by default
+# force_allow_cors = true # if set, allow CORS requests regardless of origin ACAO

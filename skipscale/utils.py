@@ -49,7 +49,7 @@ async def make_request(incoming_request, outgoing_request_url,
 
     return r
 
-def cache_headers(cache_control_override, received_response):
+def cache_headers(cache_control_override, received_response, allow_cors=False):
     output_headers = {}
     if 'last-modified' in received_response.headers:
         output_headers['last-modified'] = received_response.headers['last-modified']
@@ -64,4 +64,12 @@ def cache_headers(cache_control_override, received_response):
             output_headers['expires'] = received_response.headers['expires']
         if 'pragma' in received_response.headers:
             output_headers['pragma'] = received_response.headers['pragma']
+    if allow_cors:
+        output_headers['access-control-allow-origin'] = '*'
     return output_headers
+
+def should_allow_cors(request, force_flag: bool):
+    if 'origin' in request.headers and force_flag:
+        return True
+
+    return False
