@@ -1,17 +1,31 @@
+import logging
+
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
 from skipscale.utils import cache_headers, make_request
+from skipscale.config import Config
 
 from sentry_sdk import Hub
+
+log = logging.getLogger(__name__)
+
 
 async def original(request):
     """Return an image from the origin."""
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
-    config = request.app.state.config
+    config: Config = request.app.state.config
+
+    strip_regex = config.strip_regex(tenant)
+    if strip_regex is not None:
+        original_uri = image_uri
+        image_uri = strip_regex.sub('', original_uri)
+        if original_uri != image_uri:
+            log.debug('strip_regex transformed image_uri %s -> %s',
+                      original_uri, image_uri)
 
     origin = config.origin(tenant)
     if origin:
