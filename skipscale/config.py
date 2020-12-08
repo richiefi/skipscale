@@ -1,5 +1,8 @@
+"""Skipscale parsed configuration and validators."""
+
 import os
-from typing import Any, List, Optional, Tuple, Union
+import re
+from typing import Any, List, Optional, Tuple, Dict
 
 import schema
 import validators
@@ -25,6 +28,8 @@ tenant_overrideable_fields = {
     schema.Optional('encryption'): encryption_fields,
     schema.Optional('origin'): str,
     schema.Optional('proxy'): validators.url,
+    schema.Optional('strip_regex'): schema.And(str,
+                                               lambda s: re.compile(s) is not None)
 }
 
 main_fields = {
@@ -52,6 +57,8 @@ class Config():
         with open(config_path) as f:
             parsed_config = toml.load(f)
         self.validated_config = config_schema.validate(parsed_config)
+
+        self._strip_regex_cache: Dict[str, Any] = {}
 
     def _optional_main_optional_tenant(self, tenant: str, key: str) -> Any:
         if tenant in self.validated_config["tenants"] and key in self.validated_config["tenants"][tenant]:
@@ -174,3 +181,21 @@ class Config():
         URL can include basic auth credentials for the proxy."""
 
         return self._optional_main_optional_tenant(tenant, "proxy")
+
+    def strip_regex(self, tenant: str):
+        """Returns an optional (compiled) regular expression. Matches
+        will be stripped from the path before it is sent to the origin."""
+
+        try:
+            return self._strip_regex_cache[tenant]
+        except KeyError:
+            pass
+
+        re_str = self._optional_main_optional_tenant(tenant, "strip_regex")
+        if not re_str:
+            result = None
+        else:
+            result = re.compile(re_str)
+
+        self._strip_regex_cache[tenant] = result
+        return result
