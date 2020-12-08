@@ -4,6 +4,7 @@ from starlette.responses import Response, RedirectResponse
 
 from skipscale.planner_math import plan_scale
 from skipscale.utils import cache_url, cache_headers, make_request
+from skipscale.config import Config
 
 from sentry_sdk import Hub
 
@@ -18,11 +19,13 @@ query_schema = Schema({
     Optional('center-y'): And(Use(float), lambda n: 0.0 <= n <= 1.0),
 }, ignore_extra_keys=True)
 
+
 async def planner(request):
     """Redirect to a canonical url based on the request and the original image dimensions."""
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
+    config: Config = request.app.state.config
 
     span = Hub.current.scope.span
     if span is not None:
@@ -32,7 +35,7 @@ async def planner(request):
         q = query_schema.validate(dict(request.query_params))
     except:
         raise HTTPException(400, "invalid set of query parameters")
-    
+
     if ('center-x' in q and 'center-y' not in q) or ('center-y' in q and 'center-x' not in q):
         raise HTTPException(400, "both center-x and center-y required")
 
@@ -40,29 +43,32 @@ async def planner(request):
         raise HTTPException(400, "both width and height are required when cropping")
 
     imageinfo_url = cache_url(
-        request.app.state.config.cache_endpoint(),
-        request.app.state.config.app_path_prefixes(),
+        config.cache_endpoint(),
+        config.app_path_prefixes(),
         "imageinfo",
         tenant,
         image_uri
     )
     r = await make_request(request, imageinfo_url)
-    output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
+    output_headers = cache_headers(config.cache_control_override(tenant), r)
 
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
 
     imageinfo = r.json()
 
-    scale_params = plan_scale(q, imageinfo, request.app.state.config.max_pixel_ratio(tenant))
+    scale_params = plan_scale(q, imageinfo, config.max_pixel_ratio(tenant))
 
     if 'quality' in q:
         scale_params['quality'] = q['quality']
     else:
-        scale_params['quality'] = request.app.state.config.default_quality(tenant)
+        scale_params['quality'] = config.default_quality(tenant)
 
+    default_format = config.default_format(tenant)
     if 'format' in q:
         scale_params['format'] = q['format']
+    elif default_format:
+        scale_params['format'] = default_format
     else:
         scale_params['format'] = imageinfo['format']
 
@@ -76,7 +82,7 @@ async def planner(request):
         # The request is best served by the original image, so redirect straight to that.
         original_url = cache_url(
             None, # Get relative URL for redirect
-            request.app.state.config.app_path_prefixes(),
+            config.app_path_prefixes(),
             "original",
             tenant,
             image_uri,
@@ -85,7 +91,7 @@ async def planner(request):
 
     scale_url = cache_url(
         None, # Get relative URL for redirect
-        request.app.state.config.app_path_prefixes(),
+        config.app_path_prefixes(),
         "scale",
         tenant,
         image_uri,

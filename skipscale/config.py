@@ -17,6 +17,9 @@ encryption_fields = {
 
 tenant_overrideable_fields = {
     schema.Optional('default_quality'): int, # default 85
+    schema.Optional('default_format'): schema.And(str,
+                                                  schema.Use(str.lower),
+                                                  lambda s: s in ('jpeg', 'png', 'webp')),
     schema.Optional('max_pixel_ratio'): int,
     schema.Optional('cache_control_override'): str,
     schema.Optional('encryption'): encryption_fields,
@@ -115,6 +118,15 @@ class Config():
         if not default_quality:
             return 85
         return default_quality
+
+    def default_format(self, tenant: str) -> Optional[str]:
+        """Default output image format. If not set, preserve the input format.
+        Overridden by the `format` URL parameter."""
+
+        default_format = self._optional_main_optional_tenant(tenant, "default_format")
+        if not default_format:
+            return None
+        return default_format
 
     def cache_control_override(self, tenant: str) -> int:
         return self._optional_main_optional_tenant(tenant, "cache_control_override")
