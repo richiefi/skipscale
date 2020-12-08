@@ -70,13 +70,13 @@ def cache_headers(cache_control_override, received_response,
             output_headers['access-control-allow-origin'] = allow_cors
         else:
             output_headers['access-control-allow-origin'] = '*'
-        # MDN says that this is only necessary if ACAO is not *,
-        # but with Varnish it seems to be always necessary.
         output_headers['vary'] = 'origin'
     return output_headers
 
 def should_allow_cors(request, force_flag: bool):
-    if 'origin' in request.headers and force_flag:
+    # TODO: ACAO is forced unconditionally until Varnish issues can be resolved
+    #if 'origin' in request.headers and force_flag:
+    if force_flag:
         return True
 
     return False
