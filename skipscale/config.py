@@ -17,7 +17,9 @@ encryption_fields = {
 
 tenant_overrideable_fields = {
     schema.Optional('default_quality'): int, # default 85
-    schema.Optional('default_format'): str,
+    schema.Optional('default_format'): schema.And(str,
+                                                  schema.Use(str.lower),
+                                                  lambda s: s in ('jpeg', 'png', 'webp')),
     schema.Optional('max_pixel_ratio'): int,
     schema.Optional('cache_control_override'): str,
     schema.Optional('encryption'): encryption_fields,
