@@ -1,24 +1,38 @@
+import logging
+
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
 from skipscale.utils import cache_headers, make_request
+from skipscale.config import Config
 
 from sentry_sdk import Hub
+
+log = logging.getLogger(__name__)
+
 
 async def original(request):
     """Return an image from the origin."""
 
     tenant = request.path_params['tenant']
     image_uri = request.path_params['image_uri']
-    config = request.app.state.config
+    config: Config = request.app.state.config
+
+    strip_regex = config.strip_regex(tenant)
+    if strip_regex is not None:
+        original_uri = image_uri
+        image_uri = strip_regex.sub('', original_uri)
+        if original_uri != image_uri:
+            log.debug('strip_regex transformed image_uri %s -> %s',
+                      original_uri, image_uri)
 
     origin = config.origin(tenant)
     if origin:
         request_url = origin + image_uri
     else:
         # If no origin is specified for the tenant, we expect encrypted urls.
-        key = request.app.state.config.encryption_key(tenant)
+        key = config.encryption_key(tenant)
         try:
             request_url = decrypt_url(key, tenant, image_uri.split('.')[0]) # omit file extension from encrypted url
         except:
@@ -30,10 +44,10 @@ async def original(request):
         span.set_tag("origin_url", request_url)
 
     r = await make_request(request, request_url, proxy=config.proxy(tenant))
-    output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
+    output_headers = cache_headers(config.cache_control_override(tenant), r)
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
-    # Since we're not streaming we know the real length. Upstream content-length may include
-    # content-encoding, which is reversed by httpx.
+    # Since we're not streaming we know the real length.
+    # Upstream content-length may include content-encoding, which is reversed by httpx.
     output_headers['content-length'] = str(len(r.content))
     return Response(r.content, status_code=r.status_code, headers=output_headers)
