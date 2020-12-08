@@ -33,3 +33,4 @@ origin = "https://storage.example.com/cover-originals/"
 default_quality = 90
 max_pixel_ratio = 3
 # proxy = "http://user:pass@my-proxy.example.com:8888/" # if set, uses an upstream proxy for this tenant
+# default_format = "jpeg" # if set, images are converted to this format by default
