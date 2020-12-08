@@ -32,7 +32,7 @@ async def original(request):
         request_url = origin + image_uri
     else:
         # If no origin is specified for the tenant, we expect encrypted urls.
-        key = request.app.state.config.encryption_key(tenant)
+        key = config.encryption_key(tenant)
         try:
             request_url = decrypt_url(key, tenant, image_uri.split('.')[0]) # omit file extension from encrypted url
         except:
@@ -44,10 +44,10 @@ async def original(request):
         span.set_tag("origin_url", request_url)
 
     r = await make_request(request, request_url, proxy=config.proxy(tenant))
-    output_headers = cache_headers(request.app.state.config.cache_control_override(tenant), r)
+    output_headers = cache_headers(config.cache_control_override(tenant), r)
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
-    # Since we're not streaming we know the real length. Upstream content-length may include
-    # content-encoding, which is reversed by httpx.
+    # Since we're not streaming we know the real length.
+    # Upstream content-length may include content-encoding, which is reversed by httpx.
     output_headers['content-length'] = str(len(r.content))
     return Response(r.content, status_code=r.status_code, headers=output_headers)
