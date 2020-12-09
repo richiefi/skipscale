@@ -64,6 +64,9 @@ async def planner(request):
     imageinfo = r.json()
 
     scale_params = plan_scale(q, imageinfo, config.max_pixel_ratio(tenant))
+    scaling_requested = 'width' in q or 'height' in q
+    size_identical = scale_params['width'] == imageinfo['width'] and \
+        scale_params['height'] == imageinfo['height']
 
     if 'quality' in q:
         scale_params['quality'] = q['quality']
@@ -73,13 +76,15 @@ async def planner(request):
     default_format = config.default_format(tenant)
     if 'format' in q:
         scale_params['format'] = q['format']
-    elif default_format:
+    elif default_format and scaling_requested:
+        # Convert to default format if scaling requested, but otherwise allow grabbing
+        # the original size & format.
         scale_params['format'] = default_format
     else:
         scale_params['format'] = imageinfo['format']
 
     if (
-        (scale_params['width'] == imageinfo['width'] and scale_params['height'] == imageinfo['height'] and scale_params['format'] == imageinfo['format'] and 'quality' not in q)
+        (size_identical and scale_params['format'] == imageinfo['format'] and 'quality' not in q)
         or
         (imageinfo['format'] == "gif" and scale_params['format'] == "gif") # We don't process GIFs or PNGs unless format conversion is explicitly requested
         or
