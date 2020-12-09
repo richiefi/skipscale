@@ -20,8 +20,16 @@ from skipscale.encrypt import encrypt
 from skipscale.planner import planner
 
 
-async def healthcheck(request):
+async def healthcheck(_):
     return Response(status_code=200)
+
+# pylint: disable=protected-access
+def monkeypatch_pil():
+    # Some combination of library and Pillow versions interprets JPEGs as MPOs.
+    # We don't ever expect to see MPO files, so monkeypatch Pillow to disable the detection
+    # completely.
+    from PIL import JpegImagePlugin
+    JpegImagePlugin._getmp = lambda _: None
 
 routes = [
     # Used for original images
@@ -48,6 +56,8 @@ if os.environ.get('SKIPSCALE_DEBUG') == '1':
 else:
     log.setLevel(logging.INFO)
 log.debug('app starting')
+
+monkeypatch_pil()
 
 app_config = Config()
 final_routes = []
