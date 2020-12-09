@@ -9,8 +9,8 @@ from skipscale.config import Config
 from sentry_sdk import Hub
 
 query_schema = Schema({
-    Optional('width'): And(Use(int), lambda n: n > 0),
-    Optional('height'): And(Use(int), lambda n: n > 0),
+    Optional('width'): And(Use(int), lambda n: n >= 0),
+    Optional('height'): And(Use(int), lambda n: n >= 0),
     Optional('dpr'): And(Use(int), lambda n: n > 0), # display pixel/point ratio
     Optional('quality'): And(Use(int), lambda n: 0 < n <= 100),
     Optional('mode'): And(str, Use(str.lower), lambda s: s in ('fit', 'crop', 'stretch')),
@@ -36,6 +36,12 @@ async def planner(request):
     except:
         raise HTTPException(400, "invalid set of query parameters")
 
+    # If width or height are set but zero, behave as if they weren't specified
+    if 'width' in q and q['width'] == 0:
+        del q['width']
+    if 'height' in q and q['height'] == 0:
+        del q['height']
+    
     if ('center-x' in q and 'center-y' not in q) or ('center-y' in q and 'center-x' not in q):
         raise HTTPException(400, "both center-x and center-y required")
 
