@@ -33,7 +33,9 @@ async def planner(request):
 
     try:
         q = query_schema.validate(dict(request.query_params))
-    except:
+    except Exception:
+        log.warning('invalid query parameters (planner) for %s: %s', request.path_params,
+                      request.query_params)
         raise HTTPException(400, "invalid set of query parameters")
 
     # If width or height are set but zero, behave as if they weren't specified

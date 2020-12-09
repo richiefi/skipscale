@@ -77,8 +77,10 @@ async def scale(request):
 
     try:
         q = query_schema.validate(dict(request.query_params))
-    except:
-        raise HTTPException(400, "invalid set of query parameters")
+    except Exception:
+        log.exception('invalid query parameters (scale) for %s: %s', request.path_params,
+                      request.query_params)
+        raise HTTPException(400, "invalid set of query parameters (scale)")
 
     if 'crop' not in q:
         q['crop'] = None
