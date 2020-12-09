@@ -1,15 +1,13 @@
-import logging
-
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
-from skipscale.utils import cache_headers, make_request, should_allow_cors
+from skipscale.utils import cache_headers, make_request, should_allow_cors, get_logger
 from skipscale.config import Config
 
 from sentry_sdk import Hub
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 async def original(request):

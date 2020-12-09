@@ -3,10 +3,12 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, RedirectResponse
 
 from skipscale.planner_math import plan_scale
-from skipscale.utils import cache_url, cache_headers, make_request
+from skipscale.utils import cache_url, cache_headers, make_request, get_logger
 from skipscale.config import Config
 
 from sentry_sdk import Hub
+
+log = get_logger(__name__)
 
 query_schema = Schema({
     Optional('width'): And(Use(int), lambda n: n >= 0),

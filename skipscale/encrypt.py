@@ -1,6 +1,5 @@
 import base64
 import binascii
-import logging
 
 from schema import Schema, Optional, SchemaError
 from starlette.exceptions import HTTPException
@@ -8,9 +7,11 @@ from starlette.responses import JSONResponse
 import validators
 
 from skipscale.urlcrypto import encrypt_url
+from skipscale.utils import get_logger
 from skipscale.config import Config
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
+
 post_schema = Schema({
     Optional('urls'): [validators.url],
     Optional('asset_urls'): [validators.url]

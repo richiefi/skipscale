@@ -9,10 +9,13 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, StreamingResponse
 
 from skipscale.exif_transpose import image_transpose_exif
-from skipscale.utils import cache_url, cache_headers, make_request, should_allow_cors
+from skipscale.utils import cache_url, cache_headers, make_request, should_allow_cors, \
+    get_logger
 from skipscale.config import Config
 
 from sentry_sdk import Hub
+
+log = get_logger(__name__)
 
 
 def jpegable_image(img: Image) -> Image:
