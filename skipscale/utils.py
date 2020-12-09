@@ -5,8 +5,11 @@ from typing import Optional, Union
 from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
 
-log = logging.getLogger(__name__)
+def get_logger(*components) -> logging.Logger:
+    """Get a logger under the app's hierarchy."""
 
+    name = '.'.join(['skipscale'] + list(components))
+    return logging.getLogger(name)
 
 def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, params=None) -> str:
     app_prefix = urljoin(cache_endpoint, app_path_prefixes[0])
@@ -18,6 +21,8 @@ def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, pa
 async def make_request(incoming_request, outgoing_request_url,
                        stream=False,
                        proxy: Optional[str] = None):
+    log = get_logger('utils', 'make_request')
+
     outgoing_request_headers = {}
     if 'if-modified-since' in incoming_request.headers:
         outgoing_request_headers['if-modified-since'] = incoming_request.headers['if-modified-since']

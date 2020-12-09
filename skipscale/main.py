@@ -1,16 +1,24 @@
-import httpx, httpcore
+"""Skipscale app setup. To be imported by an ASGI runner."""
+
+import logging
+import os
+
+import httpx
+import httpcore
 import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route, Mount
 
+from skipscale.utils import get_logger
 from skipscale.config import Config
 from skipscale.original import original
 from skipscale.imageinfo import imageinfo
 from skipscale.scale import scale
 from skipscale.encrypt import encrypt
 from skipscale.planner import planner
+
 
 async def healthcheck(request):
     return Response(status_code=200)
@@ -27,6 +35,19 @@ routes = [
     Route('/{tenant}/', encrypt, methods=["POST"]),
     Route('/', healthcheck)
 ]
+
+# Custom logging setup so as not to disturb the ASGI server's logging.
+log_fmt = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+log_handler = logging.StreamHandler()
+log_handler.setFormatter(log_fmt)
+log = get_logger()
+log.addHandler(log_handler)
+log.propagate = False
+if os.environ.get('SKIPSCALE_DEBUG') == '1':
+    log.setLevel(logging.DEBUG)
+else:
+    log.setLevel(logging.INFO)
+log.debug('app starting')
 
 app_config = Config()
 final_routes = []
