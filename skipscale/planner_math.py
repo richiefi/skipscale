@@ -82,12 +82,12 @@ def plan_scale(query, imageinfo, max_pixel_ratio=None):
             dpr = query['dpr']
     else:
         dpr = 1
-     
+
     if 'width' in query:
         width = query['width'] * dpr
     else:
         width = 0
-    
+
     if 'height' in query:
         height = query['height'] * dpr
     else:

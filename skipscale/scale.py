@@ -14,12 +14,30 @@ from skipscale.config import Config
 
 from sentry_sdk import Hub
 
+
+def jpegable_image(img: Image) -> Image:
+    if img.mode in ('L', 'RGB'):
+        return img
+
+    if img.mode == '1':
+        return img.convert('L')
+
+    # If not a color image with an alpha channel, convert directly to RGB
+    if img.mode != 'RGBA':
+        return img.convert('RGB')
+
+    # Image with alpha, composite on white background
+    background = Image.new('RGBA', img.size, (255, 255, 255))
+    return Image.alpha_composite(background, img).convert('RGB')
+
+
 def blocking_scale(content, q):
     i = Image.open(BytesIO(content))
     original_format = i.format
     i = image_transpose_exif(i)
     i = i.resize((q['width'], q['height']), Image.LANCZOS, q['crop'], reducing_gap = 3.0)
     if q['format'] == 'jpeg':
+        i = jpegable_image(i)
         params = {'format': 'JPEG', 'quality': q['quality'], 'optimize': True, 'progressive': True}
         if q['quality'] >= 90:
             params['subsampling'] = '4:4:4'
@@ -34,6 +52,7 @@ def blocking_scale(content, q):
     i.save(fp, **params)
     fp.seek(0)
     return fp.read()
+
 
 bg_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
