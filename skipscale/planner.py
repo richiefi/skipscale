@@ -41,7 +41,7 @@ async def planner(request):
         del q['width']
     if 'height' in q and q['height'] == 0:
         del q['height']
-    
+
     if ('center-x' in q and 'center-y' not in q) or ('center-y' in q and 'center-x' not in q):
         raise HTTPException(400, "both center-x and center-y required")
 
