@@ -1,5 +1,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+from skipscale.utils import get_logger
+
+log = get_logger(__name__)
+
+
 def bounding_box(max_width, max_height, original_width, original_height):
     """Figure out a size that fits in the requested box by maintaining original aspect
     ratio. If the requested width or height is 0, that dimension is unconstrainted."""
@@ -85,11 +90,13 @@ def plan_scale(query, imageinfo, max_pixel_ratio=None):
 
     if 'width' in query:
         width = query['width'] * dpr
+        assert width >= 0, f"invalid width, query={query}"
     else:
         width = 0
 
     if 'height' in query:
         height = query['height'] * dpr
+        assert height >= 0, f"invalid height, query={query}"
     else:
         height = 0
 
@@ -97,7 +104,14 @@ def plan_scale(query, imageinfo, max_pixel_ratio=None):
         query['center-x'] = 0.5
         query['center-y'] = 0.5
 
-    if 'mode' in query and query['mode'] == 'stretch':
+    do_stretch = query.get('mode') == 'stretch'
+    if do_stretch and (width <= 0 or height <= 0):
+        # Avoid failing later on if clients send a silly combination of parameters
+        log.warning('plan_scale: invalid width/height with mode=stretch, '
+                    'forcing fit mode (query: %s)', query)
+        do_stretch = False
+
+    if do_stretch:
         # Freeform scaling but clamped to original image dimensions
         if width < imageinfo['width']:
             w = width
@@ -123,8 +137,9 @@ def plan_scale(query, imageinfo, max_pixel_ratio=None):
     else:
         scale_params['width'] = cropped_width
         scale_params['height'] = cropped_height
-    crop = list(crop_origin(cropped_width, cropped_height, imageinfo['width'], imageinfo['height'], query['center-x'], query['center-y']))
+    crop = list(crop_origin(cropped_width, cropped_height, imageinfo['width'], imageinfo['height'],
+                            query['center-x'], query['center-y']))
     crop.extend([crop[0] + (cropped_width - 1), crop[1] + (cropped_height - 1)])
     scale_params['crop'] = ",".join(map(str, crop))
-    
+
     return scale_params
