@@ -36,8 +36,7 @@ async def planner(request):
     try:
         q = query_schema.validate(dict(request.query_params))
     except Exception:
-        log.warning('invalid query parameters (planner) for %s: %s', request.path_params,
-                      request.query_params)
+        log.warning('invalid query parameters (planner) in request %s', request.url)
         raise HTTPException(400, "invalid set of query parameters")
 
     # If width or height are set but zero, behave as if they weren't specified
@@ -112,4 +111,5 @@ async def planner(request):
         image_uri,
         scale_params
     )
+    log.debug('redirecting to scale request %s with input path %s', scale_url, request.url.path)
     return RedirectResponse(scale_url, headers=output_headers)
