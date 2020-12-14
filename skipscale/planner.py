@@ -42,7 +42,7 @@ async def planner(request):
 
     # size is a shortcut to set width/height to the same size and force fit mode
     box_size = q.get('size', 0)
-    if box_size >= 0:
+    if box_size > 0:
         q['width'] = q['height'] = box_size
         q['mode'] = 'fit'
 
