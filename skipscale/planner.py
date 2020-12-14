@@ -13,6 +13,7 @@ log = get_logger(__name__)
 query_schema = Schema({
     Optional('width'): And(Use(int), lambda n: n >= 0),
     Optional('height'): And(Use(int), lambda n: n >= 0),
+    Optional('size'): And(Use(int), lambda n: n >= 0),
     Optional('dpr'): And(Use(int), lambda n: n > 0), # display pixel/point ratio
     Optional('quality'): And(Use(int), lambda n: 0 < n <= 100),
     Optional('mode'): And(str, Use(str.lower), lambda s: s in ('fit', 'crop', 'stretch')),
@@ -38,6 +39,12 @@ async def planner(request):
     except Exception:
         log.warning('invalid query parameters (planner) in request %s', request.url)
         raise HTTPException(400, "invalid set of query parameters")
+
+    # size is a shortcut to set width/height to the same size and force fit mode
+    box_size = q.get('size', 0)
+    if box_size >= 0:
+        q['width'] = q['height'] = box_size
+        q['mode'] = 'fit'
 
     # If width or height are set but zero, behave as if they weren't specified
     if 'width' in q and q['width'] == 0:
