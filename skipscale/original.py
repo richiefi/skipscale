@@ -43,7 +43,7 @@ async def original(request):
 
     r = await make_request(request, request_url, proxy=config.proxy(tenant))
     output_headers = cache_headers(config.cache_control_override(tenant), r,
-                                   allow_cors=should_allow_cors(request, config.allow_cors(tenant)))
+                                   allow_cors=should_allow_cors(config.allow_cors(tenant), r))
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
     # Since we're not streaming we know the real length.

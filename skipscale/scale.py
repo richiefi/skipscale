@@ -98,7 +98,7 @@ async def scale(request):
 
     r = await make_request(request, request_url)
     output_headers = cache_headers(config.cache_control_override(tenant), r,
-                                   allow_cors=should_allow_cors(request, config.allow_cors(tenant)))
+                                   allow_cors=should_allow_cors(config.allow_cors(tenant), r))
 
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
