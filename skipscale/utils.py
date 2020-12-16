@@ -21,7 +21,7 @@ def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, pa
     return url
 
 async def make_request(incoming_request, outgoing_request_url,
-                       stream=False,
+                       stream=False, method='GET',
                        proxy: Optional[str] = None):
     log = get_logger('utils', 'make_request')
 
@@ -45,7 +45,7 @@ async def make_request(incoming_request, outgoing_request_url,
         client = AsyncClient(timeout=client.timeout, proxies=proxy)
         log.debug('fetching %s through proxy', outgoing_request_url)
 
-    req = client.build_request("GET", outgoing_request_url, headers=outgoing_request_headers)
+    req = client.build_request(method, outgoing_request_url, headers=outgoing_request_headers)
     try:
         r = await client.send(req, stream=stream)
     except RequestError:

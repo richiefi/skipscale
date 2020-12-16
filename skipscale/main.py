@@ -41,9 +41,9 @@ def monkeypatch_pil():
 
 routes = [
     # Used for original images
-    Route('/original/{tenant}/{image_uri:path}', original),
+    Route('/original/{tenant}/{image_uri:path}', original, methods=['GET', 'OPTIONS']),
     # Used for reverse-proxying non-image assets
-    Route('/asset/{tenant}/{image_uri:path}', original),
+    Route('/asset/{tenant}/{image_uri:path}', original, methods=['GET', 'OPTIONS']),
 
     Route('/imageinfo/{tenant}/{image_uri:path}', imageinfo),
     Route('/scale/{tenant}/{image_uri:path}', scale),

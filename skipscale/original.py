@@ -41,12 +41,23 @@ async def original(request):
         span.set_tag("tenant", tenant)
         span.set_tag("origin_url", request_url)
 
-    r = await make_request(request, request_url, proxy=config.proxy(tenant))
+    # Allowed methods should be filtered on the Route level, we accept everything here
+    method = request.method
+    if method != 'GET':
+        log.debug('forwarding %s request to %s', request.method, request_url)
+
+    r = await make_request(request, request_url, proxy=config.proxy(tenant), method=method)
     output_headers = cache_headers(config.cache_control_override(tenant), r,
                                    allow_cors=should_allow_cors(config.allow_cors(tenant), r))
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']
     # Since we're not streaming we know the real length.
     # Upstream content-length may include content-encoding, which is reversed by httpx.
+    if method == 'HEAD':
+        if 'content-length' in r.headers:
+            # Since we don't have the actual data assume that it is what
+            # the upstream tells us.
+            output_headers['content-length'] = r.headers['content-length']
+        return Response(None, status_code=r.status_code, headers=output_headers)
     output_headers['content-length'] = str(len(r.content))
     return Response(r.content, status_code=r.status_code, headers=output_headers)
