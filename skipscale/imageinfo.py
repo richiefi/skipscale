@@ -17,7 +17,7 @@ async def imageinfo(request):
     span = Hub.current.scope.span
     if span is not None:
         span.set_tag("tenant", tenant)
-        
+
     request_url = cache_url(
         request.app.state.config.cache_endpoint(),
         request.app.state.config.app_path_prefixes(),

@@ -2,7 +2,7 @@
 
 import logging
 from urllib.parse import urljoin, urlencode
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 
 from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
@@ -26,13 +26,17 @@ async def make_request(incoming_request, outgoing_request_url,
     log = get_logger('utils', 'make_request')
 
     outgoing_request_headers = {}
-    if 'if-modified-since' in incoming_request.headers:
-        outgoing_request_headers['if-modified-since'] = incoming_request.headers['if-modified-since']
-    if 'if-none-match' in incoming_request.headers:
-        outgoing_request_headers['if-none-match'] = incoming_request.headers['if-none-match']
-    if 'origin' in incoming_request.headers:
-        outgoing_request_headers['origin'] = incoming_request.headers['origin']
-        log.debug('forwarding downstream Origin: %s', outgoing_request_headers['origin'])
+    def fwd_header(name, do_log=False) -> None:
+        if name in incoming_request.headers:
+            outgoing_request_headers[name] = incoming_request.headers[name]
+            if do_log:
+                log.debug('forwarding downstream %s: %s', name, outgoing_request_headers[name])
+
+    fwd_header('if-modified-since')
+    fwd_header('if-none-match')
+    fwd_header('origin', do_log=True)
+    fwd_header('access-control-request-method')
+    fwd_header('access-control-request-headers')
 
     close_client = False
     client = incoming_request.app.state.httpx_client
@@ -60,7 +64,7 @@ async def make_request(incoming_request, outgoing_request_url,
     return r
 
 def cache_headers(cache_control_override, received_response,
-                  allow_cors: Union[str, bool] = False):
+                  allow_cors: Union[str, dict, bool] = False):
     output_headers = {}
     if 'last-modified' in received_response.headers:
         output_headers['last-modified'] = received_response.headers['last-modified']
@@ -78,12 +82,14 @@ def cache_headers(cache_control_override, received_response,
     if allow_cors:
         if isinstance(allow_cors, str):
             output_headers['access-control-allow-origin'] = allow_cors
+        elif isinstance(allow_cors, dict):
+            output_headers.update(allow_cors)
         else:
             output_headers['access-control-allow-origin'] = '*'
         output_headers['vary'] = 'origin'
     return output_headers
 
-def should_allow_cors(force_flag: bool, upstream_response) -> Union[str, bool]:
+def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
     log = get_logger('utils', 'should_allow_cors')
 
     # If force is set in configuration, always return ACAO=*
@@ -94,6 +100,17 @@ def should_allow_cors(force_flag: bool, upstream_response) -> Union[str, bool]:
     # Check if upstream returned ACAO and pass it on if it did
     if upstream_response is not None and 'access-control-allow-origin' in upstream_response.headers:
         acao = upstream_response.headers['access-control-allow-origin']
+        addl_headers: Dict[str, str] = {
+            'access-control-allow-origin': acao
+        }
+
+        if 'access-control-allow-method' in upstream_response.headers:
+            addl_headers['access-control-allow-method'] = \
+                upstream_response.headers['access-control-allow-method']
+        if 'access-control-allow-headers' in upstream_response.headers:
+            addl_headers['access-control-allow-headers'] = \
+                upstream_response.headers['access-control-allow-headers']
+
         log.debug('forwarding upstream ACAO: %s', acao)
         return acao
 
