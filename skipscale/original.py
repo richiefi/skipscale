@@ -47,7 +47,9 @@ async def original(request):
         log.debug('forwarding %s request to %s', request.method, request_url)
 
     r = await make_request(request, request_url, proxy=config.proxy(tenant), method=method)
-    output_headers = cache_headers(config.cache_control_override(tenant), r,
+    output_headers = cache_headers(config.cache_control_override(tenant),
+                                   config.cache_control_minimum(tenant),
+                                   r,
                                    allow_cors=should_allow_cors(config.allow_cors(tenant), r))
     if 'content-type' in r.headers:
         output_headers['content-type'] = r.headers['content-type']

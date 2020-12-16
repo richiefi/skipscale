@@ -1,8 +1,9 @@
 """Miscellaneous utility functions."""
 
 import logging
+import copy
 from urllib.parse import urljoin, urlencode
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, List
 
 from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
@@ -63,7 +64,9 @@ async def make_request(incoming_request, outgoing_request_url,
 
     return r
 
-def cache_headers(cache_control_override, received_response,
+def cache_headers(cache_control_override: Optional[str],
+                  cache_control_minimum: Optional[str],
+                  received_response,
                   allow_cors: Union[str, dict, bool] = False):
     output_headers = {}
     if 'last-modified' in received_response.headers:
@@ -72,6 +75,12 @@ def cache_headers(cache_control_override, received_response,
         output_headers['etag'] = received_response.headers['etag']
     if cache_control_override:
         output_headers['cache-control'] = cache_control_override
+    elif cache_control_minimum:
+        received_cc = ParsedCacheControl(received_response.get('cache-control'))
+        reference_cc = ParsedCacheControl(cache_control_minimum)
+        new_cc = str(received_cc.merge(reference_cc))
+        if new_cc:
+            output_headers['cache-control'] = new_cc
     else:
         if 'cache-control' in received_response.headers:
             output_headers['cache-control'] = received_response.headers['cache-control']
@@ -115,3 +124,131 @@ def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
         return acao
 
     return False
+
+class ParsedCacheControl:
+    def __init__(self, header: Optional[str]) -> None:
+        self.is_present = False
+
+        self.storage: Optional[str] = None
+        self.max_age: Optional[int] = None
+        self.s_maxage: Optional[int] = None
+        self.stale_error: Optional[int] = None
+        self.stale_revalidate: Optional[int] = None
+        self.other: List[str] = []
+
+        self._log = get_logger('utils', 'ParsedCacheControl')
+
+        if header is None:
+            return
+
+        try:
+            self._parse_header(header)
+        except Exception:
+            self._log.exception('failed to parse Cache-Control header %r', header)
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__ valid={self.is_valid} header={str(self)!r}>'
+
+    def __str__(self) -> str:
+        if not self.is_present:
+            return ''
+
+        comps: List[str] = []
+        if self.storage:
+            comps.append(self.storage)
+        if self.max_age is not None:
+            comps.append(f'max-age={self.max_age}')
+        if self.s_maxage is not None:
+            comps.append(f's-maxage={self.s_maxage}')
+        if self.stale_error is not None:
+            comps.append(f'stale-if-error={self.stale_error}')
+        if self.stale_revalidate is not None:
+            comps.append(f'stale-while-revalidate={self.stale_revalidate}')
+        for other_key, other_value in self.other:
+            if other_value is None:
+                comps.append(other_key)
+                continue
+
+            comps.append('f{other_key}={other_value}')
+
+        return ', '.join(comps)
+
+    def _parse_header(self, header: str) -> None:
+        header = header.strip()
+        if not header:
+            return
+
+        self.is_present = True
+
+        def parse_number(val: str) -> int:
+            try:
+                # Allow floats but discard fractional part
+                num = int(float(val))
+                # Reject negative
+                if num < 0:
+                    raise ValueError('negative value')
+                return num
+            except (TypeError, ValueError):
+                return None
+
+        for comp in header.split(','):
+            comp = comp.strip()
+            if not comp:
+                continue
+
+            value: Optional[str]
+            if '=' in comp:
+                comp, value = comp.split('=', 1)
+            else:
+                value = None
+
+            if comp in ('public', 'private', 'no-cache', 'no-store'):
+                self.storage = comp
+            elif comp == 'max-age':
+                self.max_age = parse_number(value)
+            elif comp == 's-maxage':
+                self.s_maxage = parse_number(value)
+            elif comp == 'stale-if-error':
+                self.stale_error = parse_number(value)
+            elif comp == 'stale-while-revalidate':
+                self.stale_revalidate = parse_number(value)
+            else:
+                self.other.append((comp, value))
+
+    def copy(self) -> 'ParsedCacheControl':
+        return copy.deepcopy(self)
+
+    def merge(self, other: 'ParsedCacheControl') -> 'ParsedCacheControl':
+        """Merge max-age values from `other` to this instance if they are
+        longer than in this one."""
+
+        if not self.is_present:
+            return other
+
+        def safe_le(a: Optional[int], b: Optional[int]) -> bool:
+            if a is None and b is None:
+                return False
+
+            if a is None and b is not None:
+                return True
+
+            if a is not None and b is None:
+                return False
+
+            return a < b # type: ignore
+
+        def merge_field(key):
+            a = getattr(self, key)
+            b = getattr(other, key)
+            if safe_le(a, b):
+                setattr(self, key, b)
+
+        merge_field('max_age')
+        merge_field('s_maxage')
+        merge_field('stale_revalidate')
+        merge_field('stale_error')
+
+        if self.storage is None:
+            self.storage = other.storage
+
+        return self
