@@ -159,6 +159,27 @@ def is_safe_path(path: str) -> bool:
 
     return is_safe
 
+# This should contain parameters that typically indicate the version of a mutable
+# resource. This allows scaling efficiently caching paths such as /foo.jpg?v=ab1234
+# where contents of foo.jpg may change but the change will be reflected by a changed
+# query string in some container. These parameters must not overlap with scaling-related
+# parameters.
+FORWARDABLE_PARAMS = ('v', 'hash')
+
+def extract_forwardable_params(q_params: Dict[str, str]) -> Tuple[Dict[str, str], Dict[str, str]]:
+    """Extract parameters that should be forwarded to subsequent requests
+    or the origin from a query string. Modifies the dictionary passed in,
+    returns the extracted parameters as a new dictionary."""
+
+    result: Dict[str, str] = {}
+    for key in FORWARDABLE_PARAMS:
+        try:
+            result[key] = q_params.pop(key)
+        except KeyError:
+            pass
+
+    return q_params, result
+
 class ParsedCacheControl:
     """A parsed representation of a Cache-Control header."""
 

@@ -3,7 +3,8 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, RedirectResponse
 
 from skipscale.planner_math import plan_scale
-from skipscale.utils import cache_url, cache_headers_with_config, make_request, get_logger
+from skipscale.utils import cache_url, cache_headers_with_config, make_request, get_logger, \
+    extract_forwardable_params
 from skipscale.config import Config
 
 from sentry_sdk import Hub
@@ -34,14 +35,15 @@ async def planner(request):
     if span is not None:
         span.set_tag("tenant", tenant)
 
+    in_q, fwd_q = extract_forwardable_params(dict(request.query_params))
     try:
-        q = query_schema.validate(dict(request.query_params))
+        q = query_schema.validate(in_q)
     except Exception:
         log.warning('invalid query parameters (planner) in request %s', request.url)
         raise HTTPException(400, "invalid set of query parameters")
 
     # size is a shortcut to set width/height to the same size and force fit mode
-    box_size = q.get('size', 0)
+    box_size = q.pop('size', 0)
     if box_size > 0:
         q['width'] = q['height'] = box_size
         q['mode'] = 'fit'
@@ -63,7 +65,8 @@ async def planner(request):
         config.app_path_prefixes(),
         "imageinfo",
         tenant,
-        image_uri
+        image_uri,
+        fwd_q
     )
     r = await make_request(request, imageinfo_url)
     output_headers = cache_headers_with_config(config, tenant, r)
@@ -107,9 +110,13 @@ async def planner(request):
             "original",
             tenant,
             image_uri,
+            fwd_q
         )
+        log.debug('redirecting to original request %s with input path %s',
+                  original_url, request.url.path)
         return RedirectResponse(original_url, headers=output_headers)
 
+    scale_params.update(fwd_q)
     scale_url = cache_url(
         None, # Get relative URL for redirect
         config.app_path_prefixes(),

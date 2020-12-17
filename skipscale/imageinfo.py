@@ -4,7 +4,8 @@ from PIL import Image
 from starlette.responses import Response, JSONResponse
 
 from skipscale.exif_transpose import image_transpose_exif
-from skipscale.utils import cache_url, cache_headers_with_config, make_request
+from skipscale.utils import cache_url, cache_headers_with_config, make_request, \
+    extract_forwardable_params
 from skipscale.config import Config
 
 from sentry_sdk import Hub
@@ -20,12 +21,14 @@ async def imageinfo(request):
     if span is not None:
         span.set_tag("tenant", tenant)
 
+    _, fwd_q = extract_forwardable_params(dict(request.query_params))
     request_url = cache_url(
         request.app.state.config.cache_endpoint(),
         request.app.state.config.app_path_prefixes(),
         "original",
         tenant,
-        image_uri
+        image_uri,
+        fwd_q
     )
 
     r = await make_request(request, request_url)
