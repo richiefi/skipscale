@@ -28,6 +28,13 @@ async def original(request):
     origin = config.origin(tenant)
     if origin:
         request_url = origin + image_uri
+        # Encrypted URLs allow passing query parameters to the origin (as they are wrapped in the
+        # encrypted envelope).  Also allow this for fixed-origin requests by forwarding the query
+        # string attached to the request.
+        original_qp = request.url.query
+        if original_qp:
+            request_url = '{request_url}?{original_qp}'
+            log.debug('preserving query params for fixed-origin request: %s', request_url)
     else:
         # If no origin is specified for the tenant, we expect encrypted urls.
         key = config.encryption_key(tenant)
