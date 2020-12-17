@@ -95,7 +95,10 @@ def cache_headers(cache_control_override: Optional[str],
             output_headers.update(allow_cors)
         else:
             output_headers['access-control-allow-origin'] = '*'
-        output_headers['vary'] = 'origin'
+        final_acao = output_headers.get('access-control-allow-origin')
+        # See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin#CORS_and_caching
+        if final_acao and final_acao != '*':
+            output_headers['vary'] = 'origin'
     return output_headers
 
 def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
