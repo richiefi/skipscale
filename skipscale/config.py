@@ -147,9 +147,10 @@ class Config():
         sent or it has a shorter max-age or s-maxage than the ones specified here.
 
         If stale-while-revalidate or stale-if-error are set here, they will be
-        also be merged into the upstrem header.
+        also be merged into the upstream header.
 
-        Note: upstream Expires and Pragma headers will be always be ignored."""
+        Note: upstream Expires and Pragma headers will be always be ignored
+        if this option is set."""
         return self._optional_main_optional_tenant(tenant, "cache_control_minimum")
 
     def max_pixel_ratio(self, tenant: str) -> int:
