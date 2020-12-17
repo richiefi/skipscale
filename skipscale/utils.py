@@ -152,6 +152,10 @@ class ParsedCacheControl:
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__ valid={self.is_valid} header={str(self)!r}>'
 
+    # Special max_age to signal "immutable"
+    IMMUTABLE_AGE = 2**31
+    MAX_AGE = IMMUTABLE_AGE - 1
+
     def __str__(self) -> str:
         if not self.is_present:
             return ''
@@ -159,10 +163,13 @@ class ParsedCacheControl:
         comps: List[str] = []
         if self.storage:
             comps.append(self.storage)
-        if self.max_age is not None:
-            comps.append(f'max-age={self.max_age}')
-        if self.s_maxage is not None:
-            comps.append(f's-maxage={self.s_maxage}')
+        if self.is_immutable:
+            comps.append('immutable')
+        else:
+            if self.max_age is not None:
+                comps.append(f'max-age={self.max_age}')
+            if self.s_maxage is not None:
+                comps.append(f's-maxage={self.s_maxage}')
         if self.stale_error is not None:
             comps.append(f'stale-if-error={self.stale_error}')
         if self.stale_revalidate is not None:
@@ -175,6 +182,13 @@ class ParsedCacheControl:
             comps.append('f{other_key}={other_value}')
 
         return ', '.join(comps)
+
+    @property
+    def is_immutable(self):
+        if self.max_age is None:
+            return False
+
+        return self.max_age >= self.IMMUTABLE_AGE
 
     def _parse_header(self, header: str) -> None:
         header = header.strip()
@@ -190,6 +204,9 @@ class ParsedCacheControl:
                 # Reject negative
                 if num < 0:
                     raise ValueError('negative value')
+                # Clamp to a sane value
+                if num > self.MAX_AGE:
+                    num = self.MAX_AGE
                 return num
             except (TypeError, ValueError):
                 return None
@@ -215,6 +232,11 @@ class ParsedCacheControl:
                 self.stale_error = parse_number(value)
             elif comp == 'stale-while-revalidate':
                 self.stale_revalidate = parse_number(value)
+            elif comp == 'immutable':
+                # Indicate this using a special max_age. Simplifies comparisons
+                # and allows later max-age directives to override.
+                self.max_age = self.IMMUTABLE_AGE
+                self.s_maxage = None
             else:
                 self.other.append((comp, value))
 
