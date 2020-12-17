@@ -3,7 +3,7 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, RedirectResponse
 
 from skipscale.planner_math import plan_scale
-from skipscale.utils import cache_url, cache_headers, make_request, get_logger, should_allow_cors
+from skipscale.utils import cache_url, cache_headers_with_config, make_request, get_logger
 from skipscale.config import Config
 
 from sentry_sdk import Hub
@@ -66,10 +66,7 @@ async def planner(request):
         image_uri
     )
     r = await make_request(request, imageinfo_url)
-    output_headers = cache_headers(config.cache_control_override(tenant),
-                                   config.cache_control_minimum(tenant),
-                                   r,
-                                   allow_cors=should_allow_cors(config.allow_cors(tenant), r))
+    output_headers = cache_headers_with_config(config, tenant, r)
 
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)

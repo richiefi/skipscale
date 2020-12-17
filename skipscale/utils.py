@@ -3,7 +3,7 @@
 import logging
 import copy
 from urllib.parse import urljoin, urlencode
-from typing import Optional, Union, Dict, List
+from typing import Optional, Union, Dict, List, Tuple
 
 from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
@@ -64,11 +64,18 @@ async def make_request(incoming_request, outgoing_request_url,
 
     return r
 
+# Shortcut for the most common type of cache_headers invocation
+def cache_headers_with_config(config, tenant: str, received_response) -> Dict[str, str]:
+    return cache_headers(config.cache_control_override(tenant),
+                         config.cache_control_minimum(tenant),
+                         config.allow_cors(tenant),
+                         received_response)
+
 def cache_headers(cache_control_override: Optional[str],
                   cache_control_minimum: Optional[str],
-                  received_response,
-                  allow_cors: Union[str, dict, bool] = False):
-    output_headers = {}
+                  force_cors: bool,
+                  received_response) -> Dict[str, str]:
+    output_headers: Dict[str, str] = {}
     if 'last-modified' in received_response.headers:
         output_headers['last-modified'] = received_response.headers['last-modified']
     if 'etag' in received_response.headers:
@@ -88,6 +95,8 @@ def cache_headers(cache_control_override: Optional[str],
             output_headers['expires'] = received_response.headers['expires']
         if 'pragma' in received_response.headers:
             output_headers['pragma'] = received_response.headers['pragma']
+
+    allow_cors = should_allow_cors(force_cors, received_response)
     if allow_cors:
         if isinstance(allow_cors, str):
             output_headers['access-control-allow-origin'] = allow_cors
@@ -129,6 +138,8 @@ def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
     return False
 
 class ParsedCacheControl:
+    """A parsed representation of a Cache-Control header."""
+
     def __init__(self, header: Optional[str]) -> None:
         self.is_present = False
 
@@ -137,7 +148,7 @@ class ParsedCacheControl:
         self.s_maxage: Optional[int] = None
         self.stale_error: Optional[int] = None
         self.stale_revalidate: Optional[int] = None
-        self.other: List[str] = []
+        self.other: List[Tuple[str, Optional[str]]] = []
 
         self._log = get_logger('utils', 'ParsedCacheControl')
 
@@ -150,7 +161,7 @@ class ParsedCacheControl:
             self._log.exception('failed to parse Cache-Control header %r', header)
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__ valid={self.is_valid} header={str(self)!r}>'
+        return f'<{self.__class__.__name__} present={self.is_present} header={str(self)!r}>'
 
     # Special max_age to signal "immutable"
     IMMUTABLE_AGE = 2**31
@@ -197,7 +208,11 @@ class ParsedCacheControl:
 
         self.is_present = True
 
-        def parse_number(val: str) -> int:
+        def parse_number(val: Optional[str]) -> Optional[int]:
+            if val is None:
+                # Item was missing the time argument
+                return None
+
             try:
                 # Allow floats but discard fractional part
                 num = int(float(val))

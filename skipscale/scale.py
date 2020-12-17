@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, StreamingResponse
 
 from skipscale.exif_transpose import image_transpose_exif
-from skipscale.utils import cache_url, cache_headers, make_request, should_allow_cors, \
+from skipscale.utils import cache_url, cache_headers_with_config, make_request, \
     get_logger
 from skipscale.config import Config
 
@@ -97,10 +97,7 @@ async def scale(request):
     )
 
     r = await make_request(request, request_url)
-    output_headers = cache_headers(config.cache_control_override(tenant),
-                                   config.cache_control_minimum(tenant),
-                                   r,
-                                   allow_cors=should_allow_cors(config.allow_cors(tenant), r))
+    output_headers = cache_headers_with_config(config, tenant, r)
 
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
