@@ -2,7 +2,7 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
-from skipscale.utils import cache_headers_with_config, make_request, get_logger
+from skipscale.utils import cache_headers_with_config, make_request, get_logger, is_safe_path
 from skipscale.config import Config
 
 from sentry_sdk import Hub
@@ -27,13 +27,18 @@ async def original(request):
 
     origin = config.origin(tenant)
     if origin:
+        # Prevent traversal past configured origin's /
+        if not is_safe_path(image_uri):
+            log.warning('tenant %r: requested unsafe path traversal %r', tenant, image_uri)
+            raise HTTPException(403, "Invalid path")
+
         request_url = origin + image_uri
         # Encrypted URLs allow passing query parameters to the origin (as they are wrapped in the
         # encrypted envelope).  Also allow this for fixed-origin requests by forwarding the query
         # string attached to the request.
         original_qp = request.url.query
         if original_qp:
-            request_url = '{request_url}?{original_qp}'
+            request_url = f'{request_url}?{original_qp}'
             log.debug('preserving query params for fixed-origin request: %s', request_url)
     else:
         # If no origin is specified for the tenant, we expect encrypted urls.

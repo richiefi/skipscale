@@ -83,7 +83,7 @@ def cache_headers(cache_control_override: Optional[str],
     if cache_control_override:
         output_headers['cache-control'] = cache_control_override
     elif cache_control_minimum:
-        received_cc = ParsedCacheControl(received_response.get('cache-control'))
+        received_cc = ParsedCacheControl(received_response.headers.get('cache-control'))
         reference_cc = ParsedCacheControl(cache_control_minimum)
         new_cc = str(received_cc.merge(reference_cc))
         if new_cc:
@@ -136,6 +136,28 @@ def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
         return acao
 
     return False
+
+def is_safe_path(path: str) -> bool:
+    """Returns a path with traversal and double slashed eliminated. Leading slashes are also
+    removed."""
+
+    is_safe = True
+    new_comps: List[str] = []
+    for comp in path.split('/'):
+        if not comp or comp == '.':
+            continue
+
+        if comp == '..':
+            try:
+                new_comps.pop(-1)
+            except IndexError:
+                # Tried to move past /
+                is_safe = False
+            continue
+
+        new_comps.append(comp)
+
+    return is_safe
 
 class ParsedCacheControl:
     """A parsed representation of a Cache-Control header."""
