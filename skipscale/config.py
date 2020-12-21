@@ -25,6 +25,7 @@ tenant_overrideable_fields = {
                                                   lambda s: s in ('jpeg', 'png', 'webp')),
     schema.Optional('max_pixel_ratio'): int,
     schema.Optional('cache_control_override'): str,
+    schema.Optional('cache_control_minimum'): str,
     schema.Optional('encryption'): encryption_fields,
     schema.Optional('origin'): str,
     schema.Optional('proxy'): validators.url,
@@ -64,10 +65,11 @@ class Config():
     def _optional_main_optional_tenant(self, tenant: str, key: str) -> Any:
         if tenant in self.validated_config["tenants"] and key in self.validated_config["tenants"][tenant]:
             return self.validated_config["tenants"][tenant][key]
-        elif key in self.validated_config:
+
+        if key in self.validated_config:
             return self.validated_config[key]
-        else:
-            return None
+
+        return None
 
     def app_path_prefixes(self) -> List[str]:
         if "app_path_prefixes" in self.validated_config:
@@ -136,8 +138,20 @@ class Config():
             return None
         return default_format
 
-    def cache_control_override(self, tenant: str) -> int:
+    def cache_control_override(self, tenant: str) -> Optional[str]:
+        """Unconditionally overrides origin Cache-Control."""
         return self._optional_main_optional_tenant(tenant, "cache_control_override")
+
+    def cache_control_minimum(self, tenant: str) -> Optional[str]:
+        """Overrides origin Cache-Control cache times if either no Cache-Control is
+        sent or it has a shorter max-age or s-maxage than the ones specified here.
+
+        If stale-while-revalidate or stale-if-error are set here, they will be
+        also be merged into the upstream header.
+
+        Note: upstream Expires and Pragma headers will be always be ignored
+        if this option is set."""
+        return self._optional_main_optional_tenant(tenant, "cache_control_minimum")
 
     def max_pixel_ratio(self, tenant: str) -> int:
         return self._optional_main_optional_tenant(tenant, "max_pixel_ratio")

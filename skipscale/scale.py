@@ -9,8 +9,8 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response, StreamingResponse
 
 from skipscale.exif_transpose import image_transpose_exif
-from skipscale.utils import cache_url, cache_headers, make_request, should_allow_cors, \
-    get_logger
+from skipscale.utils import cache_url, cache_headers_with_config, make_request, \
+    get_logger, extract_forwardable_params
 from skipscale.config import Config
 
 from sentry_sdk import Hub
@@ -78,8 +78,9 @@ async def scale(request):
     if span is not None:
         span.set_tag("tenant", tenant)
 
+    in_q, fwd_q = extract_forwardable_params(dict(request.query_params))
     try:
-        q = query_schema.validate(dict(request.query_params))
+        q = query_schema.validate(in_q)
     except Exception:
         log.exception('invalid query parameters (scale) for %s: %s', request.path_params,
                       request.query_params)
@@ -93,12 +94,12 @@ async def scale(request):
         config.app_path_prefixes(),
         "original",
         tenant,
-        image_uri
+        image_uri,
+        fwd_q
     )
 
     r = await make_request(request, request_url)
-    output_headers = cache_headers(config.cache_control_override(tenant), r,
-                                   allow_cors=should_allow_cors(request, config.allow_cors(tenant)))
+    output_headers = cache_headers_with_config(config, tenant, r)
 
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
