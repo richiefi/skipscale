@@ -138,8 +138,8 @@ def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
     return False
 
 def is_safe_path(path: str) -> bool:
-    """Returns a path with traversal and double slashed eliminated. Leading slashes are also
-    removed."""
+    """Checks whether the given path attempts traversal with /. Returns True
+    if path is safe, False otherwise."""
 
     is_safe = True
     new_comps: List[str] = []

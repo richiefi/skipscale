@@ -33,7 +33,7 @@ async def imageinfo(request):
 
     r = await make_request(request, request_url)
     # Technically imageinfo is ever only called internally so it doesn't need CORS headers to
-    # function.. But the planner will set up headers for its user-facing 304/307 responses based on
+    # function... but the planner will set up headers for its user-facing 304/307 responses based on
     # the headers it receives from imageinfo, so we need to pass them through for its benefit here.
     output_headers = cache_headers_with_config(config, tenant, r)
 
