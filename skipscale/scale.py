@@ -3,7 +3,7 @@ import concurrent.futures
 import functools
 from io import BytesIO
 
-from PIL import Image
+from PIL import Image, ImageFile
 from schema import Schema, And, Optional, Use
 from starlette.exceptions import HTTPException
 from starlette.responses import Response, StreamingResponse
@@ -17,6 +17,7 @@ from sentry_sdk import Hub
 
 log = get_logger(__name__)
 
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def jpegable_image(img: Image) -> Image:
     if img.mode in ('L', 'RGB'):
