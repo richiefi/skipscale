@@ -47,6 +47,7 @@ async def original(request):
             request_url = decrypt_url(key, tenant, image_uri.split('.')[0]) # omit file extension from encrypted url
         except:
             raise HTTPException(400)
+        log.debug('tenant %r: decrypted image_uri %r -> %r', tenant, image_uri, request_url)
 
     span = Hub.current.scope.span
     if span is not None:
