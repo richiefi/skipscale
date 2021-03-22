@@ -2,6 +2,7 @@
 
 import logging
 import copy
+import asyncio
 from urllib.parse import urljoin, urlencode
 from typing import Optional, Union, Dict, List, Tuple
 
@@ -335,3 +336,46 @@ class ParsedCacheControl:
             self.storage = other.storage
 
         return self
+
+#
+# Enable Happy Eyeballs for httpx. Requires Python 3.8 for the relevant asyncio
+# functionality. This should deal with customer backends with broken AAAA records.
+
+from httpcore._backends.asyncio import AsyncioBackend
+
+# pylint: disable=abstract-method
+class FallbackingAsyncBackend(AsyncioBackend):
+    """asyncio backend with happy eyeballs enabled.
+    This is copypasta from _backends/asyncio.py"""
+
+    async def open_tcp_stream(
+        self,
+        hostname: bytes,
+        port: int,
+        ssl_context,
+        timeout,
+        *,
+        local_address: Optional[str],
+    ):
+        from httpcore._exceptions import map_exceptions, ConnectError, ConnectTimeout
+        from httpcore._backends.asyncio import SocketStream
+
+        host = hostname.decode("ascii")
+        connect_timeout = timeout.get("connect")
+        local_addr = None if local_address is None else (local_address, 0)
+
+        exc_map = {asyncio.TimeoutError: ConnectTimeout, OSError: ConnectError}
+        with map_exceptions(exc_map):
+            stream_reader, stream_writer = await asyncio.wait_for(
+                asyncio.open_connection(
+                    host, port, ssl=ssl_context, local_addr=local_addr,
+                    # Enable Happy Eyeballs, see
+                    # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.create_connection
+                    interleave=1,
+                    happy_eyeballs_delay=0.5
+                ),
+                connect_timeout,
+            )
+            return SocketStream(
+                stream_reader=stream_reader, stream_writer=stream_writer
+            )
