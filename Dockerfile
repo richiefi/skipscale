@@ -12,7 +12,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Dummy env, increment to force builder to abandon apt cache
 ENV APTDATE 20210222
 
-ARG mozjpeg_tag=v4.0.0
+ARG mozjpeg_tag=v4.0.3
 
 RUN apt-get update && \
     apt-get install cmake libtool nasm make pkg-config curl python3.9-dev python3.9-distutils libffi-dev libpng-dev libwebp-dev zlib1g-dev ca-certificates -y --no-install-recommends && \
