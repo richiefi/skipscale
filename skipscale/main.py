@@ -4,7 +4,6 @@ import logging
 import os
 
 import httpx
-import httpcore
 import sentry_sdk
 import uvicorn.workers
 
@@ -96,16 +95,24 @@ else:
     # Let uvicorn and httpcore do whatever they do by default
     httpcore_backend = 'auto' # interpreted by httpcore
 
-pool = httpcore.AsyncConnectionPool(
-    http2=app_config.origin_request_http2(),
+timeout = httpx.Timeout(
+    app_config.origin_request_timeout_seconds(),
+    connect=app_config.origin_request_connect_timeout_seconds()
+)
+
+limits = httpx.Limits(
     max_keepalive_connections=app_config.origin_request_max_keepalive_connections(),
-    max_connections=app_config.origin_request_max_connections(),
+    max_connections=app_config.origin_request_max_connections()
+)
+
+transport = httpx.AsyncHTTPTransport(
+    http2=app_config.origin_request_http2(),
+    limits=limits,
     local_address=app_config.origin_request_local_address(),
     backend=httpcore_backend
 )
-timeout = httpx.Timeout(app_config.origin_request_timeout_seconds(),
-                        connect=app_config.origin_request_connect_timeout_seconds())
-app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=pool)
+
+app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=transport)
 
 if app_config.sentry_dsn():
     if app_config.sentry_traces_sample_rate():
