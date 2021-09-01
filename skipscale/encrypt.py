@@ -89,16 +89,15 @@ async def encrypt(request):
         req = client.build_request('GET', visionrecognizer_url)
         try:
             r = await client.send(req)
+            result = r.json()
+            thumbnail_crop = {
+                "center_x": result["centerPoint"]["x"],
+                "center_y": 1.0 - result["centerPoint"]["y"], # visionrecognizer has a flipped y-axis
+                "width": result["imageSize"]["w"],
+                "height": result["imageSize"]["h"],
+            }
         except:
             return {"src_url": src_url, "encrypted_url": encrypted_url}
-
-        result = r.json()
-        thumbnail_crop = {
-            "center_x": result["centerPoint"]["x"],
-            "center_y": 1.0 - result["centerPoint"]["y"], # visionrecognizer has a flipped y-axis
-            "width": result["imageSize"]["w"],
-            "height": result["imageSize"]["h"],
-        }
 
         return {"src_url": src_url, "encrypted_url": encrypted_url, "thumbnail_crop": thumbnail_crop}
 
