@@ -17,7 +17,10 @@ def get_logger(*components) -> logging.Logger:
 
 def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, params=None) -> str:
     app_prefix = urljoin(cache_endpoint, app_path_prefixes[0])
-    url = urljoin(app_prefix, url_type + '/' + tenant + '/' + image_uri)
+    if url_type is not None:
+        url = urljoin(app_prefix, url_type + '/' + tenant + '/' + image_uri)
+    else:
+        url = urljoin(app_prefix, tenant + '/' + image_uri)
     if params:
         url = urljoin(url, '?' + urlencode(params, safe=','))
     return url

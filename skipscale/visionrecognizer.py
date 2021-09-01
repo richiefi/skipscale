@@ -33,7 +33,7 @@ async def visionrecognizer(request):
     image_url = cache_url(
         cache_endpoint,
         request.app.state.config.app_path_prefixes(),
-        "original",
+        None,
         tenant,
         image_uri,
         fwd_q
