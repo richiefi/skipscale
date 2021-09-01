@@ -1,6 +1,9 @@
+import asyncio
 import base64
 import binascii
+from urllib.parse import urljoin
 
+from httpx import RequestError, AsyncClient
 from schema import Schema, Optional, SchemaError
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
@@ -14,7 +17,8 @@ log = get_logger(__name__)
 
 post_schema = Schema({
     Optional('urls'): [validators.url],
-    Optional('asset_urls'): [validators.url]
+    Optional('asset_urls'): [validators.url],
+    Optional('include_thumbnail_crop', default=False): bool
 })
 
 def authenticate(request, tenant) -> bool:
@@ -55,11 +59,12 @@ async def encrypt(request):
         raise HTTPException(400, detail='Missing configuration')
 
     config: Config = request.app.state.config
+    visionrecognizer_prefix = urljoin(config.cache_endpoint(), config.app_path_prefixes()[0] + 'visionrecognizer/' + tenant + '/')
     image_prefix = config.encryption_url_prefix(tenant) + tenant + '/'
     asset_prefix = config.encryption_asset_url_prefix(tenant) + 'asset/' + tenant + '/'
     result = {}
 
-    def array_to_result(prefix, orig_urls) -> None:
+    def array_to_result(result, orig_urls, prefix='') -> None:
         src_urls: list
         if not isinstance(orig_urls, list):
             src_urls = []
@@ -77,7 +82,42 @@ async def encrypt(request):
                 extension = ""
             result[url] = prefix + encrypt_url(key, tenant, url) + extension
 
-    array_to_result(asset_prefix, body.get('asset_urls', []))
-    array_to_result(image_prefix, body.get('urls', []))
+    async def visionrecognizer_call(src_url, encrypted_url):
+        visionrecognizer_url = visionrecognizer_prefix + encrypted_url
+        print(visionrecognizer_url)
+        client: AsyncClient = request.app.state.httpx_client
+        req = client.build_request('GET', visionrecognizer_url)
+        try:
+            r = await client.send(req)
+        except:
+            return {"src_url": src_url, "encrypted_url": encrypted_url}
 
+        result = r.json()
+        thumbnail_crop = {
+            "center_x": result["centerPoint"]["x"],
+            "center_y": 1.0 - result["centerPoint"]["y"], # visionrecognizer has a flipped y-axis
+            "width": result["imageSize"]["w"],
+            "height": result["imageSize"]["h"],
+        }
+
+        return {"src_url": src_url, "encrypted_url": encrypted_url, "thumbnail_crop": thumbnail_crop}
+
+    if body.get('include_thumbnail_crop'):
+        image_encrypt_result = {}
+        array_to_result(image_encrypt_result, body.get('urls', []))
+        visionrecognizer_calls = []
+        for src_url in image_encrypt_result:
+            encrypted_url = image_encrypt_result[src_url]
+            visionrecognizer_calls.append(visionrecognizer_call(src_url, encrypted_url))
+        for visionrecognizer_result in await asyncio.gather(*visionrecognizer_calls):
+            if "thumbnail_crop" in visionrecognizer_result:
+                img_result = {"encrypted_url": image_prefix + visionrecognizer_result["encrypted_url"], "thumbnail_crop": visionrecognizer_result["thumbnail_crop"]}
+            else:
+                img_result = {"encrypted_url": image_prefix + visionrecognizer_result["encrypted_url"]}
+            result[visionrecognizer_result["src_url"]] = img_result
+    else:
+        array_to_result(result, body.get('urls', []), image_prefix)
+
+    array_to_result(result, body.get('asset_urls', []), asset_prefix)
+    
     return JSONResponse({'processedURLs': result})
