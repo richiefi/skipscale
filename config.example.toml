@@ -21,6 +21,11 @@ origin_request_http2 = false # global, not overrideable by tenant, default false
 # sentry_dsn = "https://…" # enable sentry by configuring a dsn
 # sentry_traces_sample_rate = 0.2 # enable tracing by configuring a sample rate
 
+# enable vision recognizer integration by configuring these
+# visionrecognizer_url = "example.com" # ?url=image_url will be appended to the GET request
+# visionrecognizer_cache_endpoint = "example.com" # visionrecognizer might need a public URL to access the cache
+# visionrecognizer_bearer_token = "example" # this will be sent in the Authorization header
+
 [encryption]
 key = "01234567890123456789012345678901" # 32 hex digits (128 bits)
 username = "admin" # these credentials are for the endpoint used to encrypt URLs
