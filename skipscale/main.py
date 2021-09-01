@@ -16,6 +16,7 @@ from skipscale.utils import get_logger, FallbackingAsyncBackend
 from skipscale.config import Config
 from skipscale.original import original
 from skipscale.imageinfo import imageinfo
+from skipscale.visionrecognizer import visionrecognizer
 from skipscale.scale import scale
 from skipscale.encrypt import encrypt
 from skipscale.planner import planner
@@ -56,6 +57,7 @@ routes = [
     Route('/asset/{tenant}/{image_uri:path}', original, methods=['GET', 'OPTIONS']),
 
     Route('/imageinfo/{tenant}/{image_uri:path}', imageinfo),
+    Route('/visionrecognizer/{tenant}/{image_uri:path}', visionrecognizer),
     Route('/scale/{tenant}/{image_uri:path}', scale),
     Route('/{tenant}/{image_uri:path}', planner),
     Route('/{tenant}/', encrypt, methods=["POST"]),

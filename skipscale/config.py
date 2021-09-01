@@ -45,6 +45,9 @@ main_fields = {
     schema.Optional('origin_request_local_address'): str,
     schema.Optional('sentry_dsn'): str,
     schema.Optional('sentry_traces_sample_rate'): float,
+    schema.Optional('visionrecognizer_url'): str,
+    schema.Optional('visionrecognizer_cache_endpoint'): str,
+    schema.Optional('visionrecognizer_bearer_token'): str,
     schema.Optional('tenants'): {
         str: tenant_overrideable_fields
     }
@@ -122,6 +125,21 @@ class Config():
         if "sentry_traces_sample_rate" in self.validated_config:
             return self.validated_config["sentry_traces_sample_rate"]
         return 0.0
+
+    def visionrecognizer_url(self) -> Optional[str]:
+        if 'visionrecognizer_url' in self.validated_config:
+            return self.validated_config['visionrecognizer_url']
+        return None
+
+    def visionrecognizer_cache_endpoint(self) -> Optional[str]:
+        if 'visionrecognizer_cache_endpoint' in self.validated_config:
+            return self.validated_config['visionrecognizer_cache_endpoint']
+        return None
+
+    def visionrecognizer_bearer_token(self) -> Optional[str]:
+        if 'visionrecognizer_bearer_token' in self.validated_config:
+            return self.validated_config['visionrecognizer_bearer_token']
+        return None
 
     def default_quality(self, tenant: str) -> int:
         default_quality = self._optional_main_optional_tenant(tenant, "default_quality")
