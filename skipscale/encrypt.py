@@ -84,7 +84,6 @@ async def encrypt(request):
 
     async def visionrecognizer_call(src_url, encrypted_url):
         visionrecognizer_url = visionrecognizer_prefix + encrypted_url
-        print(visionrecognizer_url)
         client: AsyncClient = request.app.state.httpx_client
         req = client.build_request('GET', visionrecognizer_url)
         try:
@@ -117,7 +116,7 @@ async def encrypt(request):
             visionrecognizer_calls.append(visionrecognizer_call(src_url, encrypted_url))
         for visionrecognizer_result in await asyncio.gather(*visionrecognizer_calls):
             if "thumbnail_crop" in visionrecognizer_result:
-                img_result = {"encrypted_url": image_prefix + visionrecognizer_result["encrypted_url"], "thumbnail_crop": visionrecognizer_result["thumbnail_crop"]}
+                img_result = {"encrypted_url": image_prefix + visionrecognizer_result["encrypted_url"], "thumbnail_crop": visionrecognizer_result["thumbnail_crop"], "properties": visionrecognizer_result["properties"]}
             else:
                 img_result = {"encrypted_url": image_prefix + visionrecognizer_result["encrypted_url"]}
             result[visionrecognizer_result["src_url"]] = img_result
