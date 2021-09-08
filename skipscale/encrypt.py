@@ -93,13 +93,20 @@ async def encrypt(request):
             thumbnail_crop = {
                 "center_x": result["centerPoint"]["x"],
                 "center_y": 1.0 - result["centerPoint"]["y"], # visionrecognizer has a flipped y-axis
-                "width": result["imageSize"]["w"],
-                "height": result["imageSize"]["h"],
             }
-        except:
+            image_properties = {
+                "width": result["imageSize"]["w"],
+                "height": result["imageSize"]["h"]
+            }
+        except Exception:
             return {"src_url": src_url, "encrypted_url": encrypted_url}
 
-        return {"src_url": src_url, "encrypted_url": encrypted_url, "thumbnail_crop": thumbnail_crop}
+        return {
+            "src_url": src_url,
+            "encrypted_url": encrypted_url,
+            "thumbnail_crop": thumbnail_crop,
+            "properties": image_properties
+        }
 
     if body.get('include_thumbnail_crop'):
         image_encrypt_result = {}
