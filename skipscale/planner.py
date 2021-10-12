@@ -76,7 +76,7 @@ async def planner(request):
 
     imageinfo = r.json()
 
-    if 'mode' in q and (q['mode'] == 'crop' and 'center-x' not in q):
+    if 'mode' in q and (q['mode'] == 'crop' and 'center-x' not in q) and config.visionrecognizer_url() is not None:
         # Crop requested but center point not specified. Perform feature detection.
         visionrecognizer_url = cache_url(
             config.cache_endpoint(),
