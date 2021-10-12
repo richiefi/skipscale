@@ -76,6 +76,26 @@ async def planner(request):
 
     imageinfo = r.json()
 
+    if 'mode' in q and (q['mode'] == 'crop' and 'center-x' not in q):
+        # Crop requested but center point not specified. Perform feature detection.
+        visionrecognizer_url = cache_url(
+            config.cache_endpoint(),
+            config.app_path_prefixes(),
+            "visionrecognizer",
+            tenant,
+            image_uri,
+            fwd_q
+        )
+        try:
+            r = await make_request(request, visionrecognizer_url)
+            if r.status_code == 304:
+                return Response(status_code=304, headers=output_headers)
+            visionrecognizer_result = r.json()
+            q['center-x'] = visionrecognizer_result["centerPoint"]["x"]
+            q['center-y'] = 1.0 - visionrecognizer_result["centerPoint"]["y"] # visionrecognizer has a flipped y-axis
+        except: # the downstream code defaults to center crop
+            pass
+
     scale_params = plan_scale(q, imageinfo, config.max_pixel_ratio(tenant))
     scaling_requested = 'width' in q or 'height' in q
     size_identical = scale_params['width'] == imageinfo['width'] and \
