@@ -14,7 +14,7 @@ ENV APTDATE 20220113
 
 ARG mozjpeg_tag=v4.0.3
 
-RUN apt-get update && apt-get upgrade && \
+RUN apt-get update && apt-get upgrade -y && \
     apt-get install cmake nasm -y --no-install-recommends && \
     rm -rf /tmp/* && rm -rf /var/cache/apt/archives/*.deb && rm -rf /var/lib/apt/lists/*
 
