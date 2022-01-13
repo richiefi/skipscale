@@ -1,4 +1,4 @@
-FROM ubuntu:rolling
+FROM python:3.10.1-bullseye
 ARG CC=cc
 
 ENV WORKER_PROCESSES 16
@@ -10,18 +10,13 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE 1
 # Dummy env, increment to force builder to abandon apt cache
-ENV APTDATE 20210222
+ENV APTDATE 20220113
 
 ARG mozjpeg_tag=v4.0.3
 
-RUN apt-get update && \
-    apt-get install cmake libtool nasm make pkg-config curl python3.9-dev python3.9-distutils libffi-dev libpng-dev libwebp-dev zlib1g-dev ca-certificates -y --no-install-recommends && \
+RUN apt-get update && apt-get upgrade && \
+    apt-get install cmake nasm -y --no-install-recommends && \
     rm -rf /tmp/* && rm -rf /var/cache/apt/archives/*.deb && rm -rf /var/lib/apt/lists/*
-
-RUN curl --silent https://bootstrap.pypa.io/get-pip.py | python3.9
-
-# Backwards compatility.
-RUN rm -fr /usr/bin/python3 && ln /usr/bin/python3.9 /usr/bin/python3
 
 RUN pip3 install pipenv
 
