@@ -20,7 +20,6 @@ schema = "*"
 gunicorn = "*"
 validators = "*"
 sentry-sdk = "*"
-uvloop = "*"
 httptools = "*"
 
 [requires]

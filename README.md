@@ -51,6 +51,8 @@ Skipscale expects to find a configuration file named `config.toml` in the curren
 
 Skipscale is intended to be deployed using Docker; the main branch of this repository is automatically built and deployed as the `richiefi/skipscale` image. The `latest-avx2` tag is available for use on systems that support the Intel® AVX2 instruction set extension. You can provide a configuration file by building a customized version of the image or by attaching a volume to the container. Specify the path using the `SKIPSCALE_CONFIG` environment variable. For performance, host networking is recommended. Set the bind address using the `BIND_ADDR` environment variable.
 
+We have omitted Uvicorn's preferred asyncio event loop implementation [uvloop](https://github.com/MagicStack/uvloop) from the Pipfile dependencies because it currently does not support [Happy Eyeballs](https://datatracker.ietf.org/doc/html/rfc6555) when performing network requests. If this [issue](https://github.com/MagicStack/uvloop/issues/406) gets resolved, or if you prioritize performance over origin request reliability, you can add the `uvloop` dependency back to the `Pipfile`.
+
 ## macOS dependencies (during development)
 
 ```
