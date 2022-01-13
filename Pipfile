@@ -9,8 +9,8 @@ mypy = "*"
 pytest = "*"
 
 [packages]
-pillow = {version = "*", platform_machine = "== 'arm64'"}
 pillow-simd = {version = "*", platform_machine = "== 'x86_64'"}
+pillow = {version = "*", platform_machine = "!= 'x86_64'"}
 httpx = {extras = ["http2"], version = "*"}
 pycryptodomex = "*"
 starlette = "*"
@@ -24,4 +24,4 @@ uvloop = "*"
 httptools = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.10"

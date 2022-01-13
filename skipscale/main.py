@@ -12,7 +12,7 @@ from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route, Mount
 
-from skipscale.utils import get_logger, FallbackingAsyncBackend
+from skipscale.utils import get_logger
 from skipscale.config import Config
 from skipscale.original import original
 from skipscale.imageinfo import imageinfo
@@ -20,12 +20,6 @@ from skipscale.visionrecognizer import visionrecognizer
 from skipscale.scale import scale
 from skipscale.encrypt import encrypt
 from skipscale.planner import planner
-
-# This doesn't currently (2021/3) work with uvloop, only with the native
-# asyncio. Enabling disables uvloop. This should be enabled by default
-# if https://github.com/MagicStack/uvloop/issues/406 gets fixed.
-USE_HAPPY_EYEBALLS = os.environ.get('SKIPSCALE_HAPPY_EYEBALLS') == '1'
-
 
 async def healthcheck(_):
     return Response(status_code=200)
@@ -87,16 +81,6 @@ for prefix in app_config.app_path_prefixes():
 app = Starlette(routes=final_routes)
 app.state.config = app_config
 
-uvicorn_args = {}
-if USE_HAPPY_EYEBALLS:
-    log.info('enabling Happy Eyeballs support (disabling uvloop)')
-    # FallbackingAsyncBackend doesn't work if loop=uvloop
-    uvicorn_args['loop'] = 'asyncio'
-    httpcore_backend = FallbackingAsyncBackend() # enables Happy Eyeballs
-else:
-    # Let uvicorn and httpcore do whatever they do by default
-    httpcore_backend = 'auto' # interpreted by httpcore
-
 timeout = httpx.Timeout(
     app_config.origin_request_timeout_seconds(),
     connect=app_config.origin_request_connect_timeout_seconds()
@@ -110,8 +94,7 @@ limits = httpx.Limits(
 transport = httpx.AsyncHTTPTransport(
     http2=app_config.origin_request_http2(),
     limits=limits,
-    local_address=app_config.origin_request_local_address(),
-    backend=httpcore_backend
+    local_address=app_config.origin_request_local_address()
 )
 
 app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=transport)
@@ -123,10 +106,3 @@ if app_config.sentry_dsn():
     else:
         sentry_sdk.init(dsn=app_config.sentry_dsn())
     app.add_middleware(SentryAsgiMiddleware)
-
-# gunicorn doesn't allow passing through all uvicorn parameters, use a custom
-# worker class to do it. Specify --worker-class skipscale.main.MyUvicornWorker
-# to use this.
-# pylint: disable=missing-class-docstring
-class MyUvicornWorker(uvicorn.workers.UvicornWorker):
-    CONFIG_KWARGS = uvicorn_args
