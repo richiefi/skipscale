@@ -27,7 +27,7 @@ def cache_url(cache_endpoint, app_path_prefixes, url_type, tenant, image_uri, pa
 
 async def make_request(incoming_request, outgoing_request_url,
                        stream=False, method='GET',
-                       proxy: Optional[str] = None):
+                       proxy: Optional[str] = None, follow_redirects=False):
     log = get_logger('utils', 'make_request')
 
     outgoing_request_headers = {}
@@ -56,7 +56,7 @@ async def make_request(incoming_request, outgoing_request_url,
 
     req = client.build_request(method, outgoing_request_url, headers=outgoing_request_headers)
     try:
-        r = await client.send(req, stream=stream)
+        r = await client.send(req, stream=stream, follow_redirects=follow_redirects)
     except RequestError:
         raise HTTPException(502)
     finally:

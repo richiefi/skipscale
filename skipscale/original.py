@@ -59,7 +59,7 @@ async def original(request):
     if method != 'GET':
         log.debug('forwarding %s request to %s', request.method, request_url)
 
-    r = await make_request(request, request_url, proxy=config.proxy(tenant), method=method)
+    r = await make_request(request, request_url, proxy=config.proxy(tenant), method=method, follow_redirects=True)
     output_headers = cache_headers_with_config(config, tenant, r)
 
     if 'content-type' in r.headers:
