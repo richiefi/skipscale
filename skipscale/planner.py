@@ -109,9 +109,9 @@ async def planner(request):
     default_format = config.default_format(tenant)
     if 'format' in q:
         scale_params['format'] = q['format']
-    elif default_format and scaling_requested:
-        # Convert to default format if scaling requested, but otherwise allow grabbing
-        # the original size & format.
+    elif default_format and not size_identical:
+        # Convert to default format if scaling, otherwise
+        # allow grabbing the original size & format.
         scale_params['format'] = default_format
     else:
         scale_params['format'] = imageinfo['format']
