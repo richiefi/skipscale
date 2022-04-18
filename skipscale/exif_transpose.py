@@ -4,6 +4,7 @@ import functools
 
 from PIL import Image
 
+
 def image_transpose_exif(im):
     """
     Apply Image.transpose to ensure 0th row of pixels is at the visual
@@ -20,16 +21,16 @@ def image_transpose_exif(im):
     """
 
     exif_orientation_tag = 0x0112
-    exif_transpose_sequences = [                   # Val  0th row  0th col
-        [],                                        #  0    (reserved)
-        [],                                        #  1   top      left
-        [Image.FLIP_LEFT_RIGHT],                   #  2   top      right
-        [Image.ROTATE_180],                        #  3   bottom   right
-        [Image.FLIP_TOP_BOTTOM],                   #  4   bottom   left
+    exif_transpose_sequences = [  # Val  0th row  0th col
+        [],  #  0    (reserved)
+        [],  #  1   top      left
+        [Image.FLIP_LEFT_RIGHT],  #  2   top      right
+        [Image.ROTATE_180],  #  3   bottom   right
+        [Image.FLIP_TOP_BOTTOM],  #  4   bottom   left
         [Image.FLIP_LEFT_RIGHT, Image.ROTATE_90],  #  5   left     top
-        [Image.ROTATE_270],                        #  6   right    top
+        [Image.ROTATE_270],  #  6   right    top
         [Image.FLIP_TOP_BOTTOM, Image.ROTATE_90],  #  7   right    bottom
-        [Image.ROTATE_90],                         #  8   left     bottom
+        [Image.ROTATE_90],  #  8   left     bottom
     ]
 
     try:

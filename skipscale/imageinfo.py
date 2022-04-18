@@ -4,17 +4,22 @@ from PIL import Image
 from starlette.responses import Response, JSONResponse
 
 from skipscale.exif_transpose import image_transpose_exif
-from skipscale.utils import cache_url, cache_headers_with_config, make_request, \
-    extract_forwardable_params
+from skipscale.utils import (
+    cache_url,
+    cache_headers_with_config,
+    make_request,
+    extract_forwardable_params,
+)
 from skipscale.config import Config
 
 from sentry_sdk import Hub
 
+
 async def imageinfo(request):
     """Return image dimensions, format and byte size."""
 
-    tenant = request.path_params['tenant']
-    image_uri = request.path_params['image_uri']
+    tenant = request.path_params["tenant"]
+    image_uri = request.path_params["image_uri"]
     config: Config = request.app.state.config
 
     span = Hub.current.scope.span
@@ -28,7 +33,7 @@ async def imageinfo(request):
         "original",
         tenant,
         image_uri,
-        fwd_q
+        fwd_q,
     )
 
     r = await make_request(request, request_url)
@@ -43,8 +48,12 @@ async def imageinfo(request):
     i = Image.open(BytesIO(r.content))
     original_format = i.format
     i = image_transpose_exif(i)
-    return JSONResponse({'width': i.width,
-                         'height': i.height,
-                         'format': original_format.lower(),
-                         'bytes': len(r.content)},
-                        headers=output_headers)
+    return JSONResponse(
+        {
+            "width": i.width,
+            "height": i.height,
+            "format": original_format.lower(),
+            "bytes": len(r.content),
+        },
+        headers=output_headers,
+    )

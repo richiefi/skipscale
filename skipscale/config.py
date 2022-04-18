@@ -8,54 +8,56 @@ import schema
 import validators
 import toml
 
-config_path = os.getenv('SKIPSCALE_CONFIG', "config.toml")
+config_path = os.getenv("SKIPSCALE_CONFIG", "config.toml")
 
 encryption_fields = {
-    'key': schema.And(schema.Use(bytes.fromhex), lambda k: len(k) == 16),
-    'username': str,
-    'password': str,
-    'url_prefix': schema.And(str, lambda s: s.endswith('/')),
-    schema.Optional('asset_url_prefix'): schema.And(str, lambda s: s.endswith('/')),
+    "key": schema.And(schema.Use(bytes.fromhex), lambda k: len(k) == 16),
+    "username": str,
+    "password": str,
+    "url_prefix": schema.And(str, lambda s: s.endswith("/")),
+    schema.Optional("asset_url_prefix"): schema.And(str, lambda s: s.endswith("/")),
 }
 
 tenant_overrideable_fields = {
-    schema.Optional('default_quality'): int, # default 85
-    schema.Optional('default_format'): schema.And(str,
-                                                  schema.Use(str.lower),
-                                                  lambda s: s in ('jpeg', 'png', 'webp')),
-    schema.Optional('max_pixel_ratio'): int,
-    schema.Optional('cache_control_override'): str,
-    schema.Optional('cache_control_minimum'): str,
-    schema.Optional('encryption'): encryption_fields,
-    schema.Optional('origin'): str,
-    schema.Optional('proxy'): validators.url,
-    schema.Optional('force_allow_cors'): bool,
-    schema.Optional('strip_regex'): schema.And(str,
-                                               lambda s: re.compile(s) is not None)
+    schema.Optional("default_quality"): int,  # default 85
+    schema.Optional("default_format"): schema.And(
+        str, schema.Use(str.lower), lambda s: s in ("jpeg", "png", "webp")
+    ),
+    schema.Optional("max_pixel_ratio"): int,
+    schema.Optional("cache_control_override"): str,
+    schema.Optional("cache_control_minimum"): str,
+    schema.Optional("encryption"): encryption_fields,
+    schema.Optional("origin"): str,
+    schema.Optional("proxy"): validators.url,
+    schema.Optional("force_allow_cors"): bool,
+    schema.Optional("strip_regex"): schema.And(
+        str, lambda s: re.compile(s) is not None
+    ),
 }
 
 main_fields = {
-    schema.Optional('app_path_prefixes'): [schema.And(str, lambda s: s.endswith('/'))], # default ["/"]
-    'cache_endpoint': schema.And(str, lambda s: s.endswith('/')),
-    schema.Optional('origin_request_connect_timeout_seconds'): float,
-    schema.Optional('origin_request_timeout_seconds'): float,
-    schema.Optional('origin_request_max_keepalive_connections'): int,
-    schema.Optional('origin_request_max_connections'): int,
-    schema.Optional('origin_request_http2'): bool,
-    schema.Optional('origin_request_local_address'): str,
-    schema.Optional('sentry_dsn'): str,
-    schema.Optional('sentry_traces_sample_rate'): float,
-    schema.Optional('visionrecognizer_url'): str,
-    schema.Optional('visionrecognizer_cache_endpoint'): str,
-    schema.Optional('visionrecognizer_bearer_token'): str,
-    schema.Optional('tenants'): {
-        str: tenant_overrideable_fields
-    }
+    schema.Optional("app_path_prefixes"): [
+        schema.And(str, lambda s: s.endswith("/"))
+    ],  # default ["/"]
+    "cache_endpoint": schema.And(str, lambda s: s.endswith("/")),
+    schema.Optional("origin_request_connect_timeout_seconds"): float,
+    schema.Optional("origin_request_timeout_seconds"): float,
+    schema.Optional("origin_request_max_keepalive_connections"): int,
+    schema.Optional("origin_request_max_connections"): int,
+    schema.Optional("origin_request_http2"): bool,
+    schema.Optional("origin_request_local_address"): str,
+    schema.Optional("sentry_dsn"): str,
+    schema.Optional("sentry_traces_sample_rate"): float,
+    schema.Optional("visionrecognizer_url"): str,
+    schema.Optional("visionrecognizer_cache_endpoint"): str,
+    schema.Optional("visionrecognizer_bearer_token"): str,
+    schema.Optional("tenants"): {str: tenant_overrideable_fields},
 }
 
 config_schema = schema.Schema({**main_fields, **tenant_overrideable_fields})
 
-class Config():
+
+class Config:
     """Server configuration parsed from a TOML file."""
 
     def __init__(self):
@@ -66,7 +68,10 @@ class Config():
         self._strip_regex_cache: Dict[str, Any] = {}
 
     def _optional_main_optional_tenant(self, tenant: str, key: str) -> Any:
-        if tenant in self.validated_config["tenants"] and key in self.validated_config["tenants"][tenant]:
+        if (
+            tenant in self.validated_config["tenants"]
+            and key in self.validated_config["tenants"][tenant]
+        ):
             return self.validated_config["tenants"][tenant][key]
 
         if key in self.validated_config:
@@ -127,18 +132,18 @@ class Config():
         return 0.0
 
     def visionrecognizer_url(self) -> Optional[str]:
-        if 'visionrecognizer_url' in self.validated_config:
-            return self.validated_config['visionrecognizer_url']
+        if "visionrecognizer_url" in self.validated_config:
+            return self.validated_config["visionrecognizer_url"]
         return None
 
     def visionrecognizer_cache_endpoint(self) -> Optional[str]:
-        if 'visionrecognizer_cache_endpoint' in self.validated_config:
-            return self.validated_config['visionrecognizer_cache_endpoint']
+        if "visionrecognizer_cache_endpoint" in self.validated_config:
+            return self.validated_config["visionrecognizer_cache_endpoint"]
         return None
 
     def visionrecognizer_bearer_token(self) -> Optional[str]:
-        if 'visionrecognizer_bearer_token' in self.validated_config:
-            return self.validated_config['visionrecognizer_bearer_token']
+        if "visionrecognizer_bearer_token" in self.validated_config:
+            return self.validated_config["visionrecognizer_bearer_token"]
         return None
 
     def default_quality(self, tenant: str) -> int:
@@ -199,7 +204,7 @@ class Config():
         (unscaled) URLs. Defaults to the value of `encryption_url_prefix`."""
 
         encryption = self._optional_main_optional_tenant(tenant, "encryption")
-        if encryption and 'asset_url_prefix' in encryption:
+        if encryption and "asset_url_prefix" in encryption:
             return encryption["asset_url_prefix"]
         return self.encryption_url_prefix(tenant)
 
