@@ -6,7 +6,9 @@ from urllib.parse import urljoin, urlencode
 from typing import Optional, Union, Dict, List, Tuple
 
 from httpx import RequestError, AsyncClient
+import sentry_sdk
 from starlette.exceptions import HTTPException
+from starlette.requests import Request
 
 
 def get_logger(*components) -> logging.Logger:
@@ -30,8 +32,8 @@ def cache_url(
 
 
 async def make_request(
-    incoming_request,
-    outgoing_request_url,
+    incoming_request: Request,
+    outgoing_request_url: str,
     stream=False,
     method="GET",
     proxy: Optional[str] = None,
@@ -79,6 +81,18 @@ async def make_request(
 
     if r.is_error:
         raise HTTPException(r.status_code)
+
+    if method == "GET" and r.status != 304 and not r.content:
+        # No error, but we got no response body.
+        sentry_sdk.set_context(
+            "outbound_request",
+            {
+                "request_url": outgoing_request_url,
+                "request_headers": outgoing_request_headers,
+                "response_headers": r.headers,
+            },
+        )
+        raise HTTPException(500, "empty body from upstream")
 
     return r
 
