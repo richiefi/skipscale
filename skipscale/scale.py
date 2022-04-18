@@ -6,6 +6,7 @@ from io import BytesIO
 from PIL import Image
 from schema import Schema, And, Optional, Use
 from starlette.exceptions import HTTPException
+from starlette.requests import Request
 from starlette.responses import Response
 
 from skipscale.exif_transpose import image_transpose_exif
@@ -85,7 +86,7 @@ query_schema = Schema(
 )
 
 
-async def scale(request):
+async def scale(request: Request):
     """Provide a scaled and/or cropped image."""
 
     tenant = request.path_params["tenant"]

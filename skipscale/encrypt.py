@@ -1,11 +1,13 @@
 import asyncio
 import base64
 import binascii
+from typing import Any
 from urllib.parse import urljoin
 
 from httpx import AsyncClient
 from schema import Schema, Optional, SchemaError
 from starlette.exceptions import HTTPException
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 import validators
 
@@ -46,7 +48,7 @@ def authenticate(request, tenant) -> bool:
     return False
 
 
-async def encrypt(request):
+async def encrypt(request: Request):
     tenant = request.path_params["tenant"]
     if not authenticate(request, tenant):
         raise HTTPException(401)
@@ -70,17 +72,20 @@ async def encrypt(request):
         config.app_path_prefixes()[0] + "visionrecognizer/" + tenant + "/",
     )
     image_prefix = config.encryption_url_prefix(tenant) + tenant + "/"
-    asset_prefix = config.encryption_asset_url_prefix(tenant) + "asset/" + tenant + "/"
-    result = {}
+    asset_url_prefix = config.encryption_asset_url_prefix(tenant)
+    if asset_url_prefix:
+        asset_prefix = asset_url_prefix + "asset/" + tenant + "/"
+    else:
+        asset_prefix = None
 
-    def array_to_result(result, orig_urls, prefix="") -> None:
-        src_urls: list
-        if not isinstance(orig_urls, list):
-            src_urls = []
-        else:
-            src_urls = orig_urls
+    # The result is a dict with each key being the source URL and the value being either an encrypted URL,
+    # or, if the request asked for a thumbnail crop, a dict with the thumbnail URL and the crop parameters.
+    result: dict[str, Any] = {}
 
-        for url in src_urls:
+    def array_to_result(
+        result: dict[str, Any], orig_urls: list[str], prefix: str = ""
+    ) -> None:
+        for url in orig_urls:
             if url.endswith(".jpg") or url.endswith(".jpeg"):
                 extension = ".jpg"
             elif url.endswith(".png"):
@@ -118,12 +123,13 @@ async def encrypt(request):
         }
 
     if body.get("include_thumbnail_crop"):
-        image_encrypt_result = {}
+        image_encrypt_result: dict[str, str] = {}
         array_to_result(image_encrypt_result, body.get("urls", []))
         visionrecognizer_calls = []
         for src_url, encrypted_url in image_encrypt_result.items():
             visionrecognizer_calls.append(visionrecognizer_call(src_url, encrypted_url))
         for visionrecognizer_result in await asyncio.gather(*visionrecognizer_calls):
+            img_result: dict[str, str]
             if "thumbnail_crop" in visionrecognizer_result:
                 img_result = {
                     "encrypted_url": image_prefix

@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 
 from httpx import RequestError, AsyncClient
 from starlette.exceptions import HTTPException
+from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
 from skipscale.utils import (
@@ -14,17 +15,17 @@ from skipscale.config import Config
 from sentry_sdk import Hub
 
 
-async def visionrecognizer(request):
+async def visionrecognizer(request: Request):
     """Return visionrecognizer data (saliency coordinates) for an image."""
 
     tenant = request.path_params["tenant"]
     image_uri = request.path_params["image_uri"]
     config: Config = request.app.state.config
 
-    if (
-        config.visionrecognizer_url() is None
-        or config.visionrecognizer_bearer_token() is None
-    ):
+    visionrecognizer_url = config.visionrecognizer_url()
+    visionrecognizer_bearer_token = config.visionrecognizer_bearer_token()
+
+    if visionrecognizer_url is None or visionrecognizer_bearer_token is None:
         raise HTTPException(500)
 
     if config.visionrecognizer_cache_endpoint() is not None:
@@ -47,9 +48,9 @@ async def visionrecognizer(request):
     )
 
     query_params = urlencode(dict(url=image_url))
-    outgoing_request_url = config.visionrecognizer_url() + "?" + query_params
+    outgoing_request_url = visionrecognizer_url + "?" + query_params
     outgoing_request_headers = {
-        "Authorization": "Bearer " + config.visionrecognizer_bearer_token()
+        "Authorization": "Bearer " + visionrecognizer_bearer_token
     }
 
     client: AsyncClient = request.app.state.httpx_client

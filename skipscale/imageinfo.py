@@ -1,6 +1,7 @@
 from io import BytesIO
 
 from PIL import Image
+from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
 from skipscale.exif_transpose import image_transpose_exif
@@ -15,7 +16,7 @@ from skipscale.config import Config
 from sentry_sdk import Hub
 
 
-async def imageinfo(request):
+async def imageinfo(request: Request):
     """Return image dimensions, format and byte size."""
 
     tenant = request.path_params["tenant"]

@@ -1,5 +1,6 @@
 from schema import Schema, And, Optional, Use
 from starlette.exceptions import HTTPException
+from starlette.requests import Request
 from starlette.responses import Response, RedirectResponse
 
 from skipscale.planner_math import plan_scale
@@ -36,7 +37,7 @@ query_schema = Schema(
 )
 
 
-async def planner(request):
+async def planner(request: Request):
     """Redirect to a canonical url based on the request and the original image dimensions."""
 
     tenant = request.path_params["tenant"]
@@ -113,7 +114,7 @@ async def planner(request):
             q["center-y"] = (
                 1.0 - visionrecognizer_result["centerPoint"]["y"]
             )  # visionrecognizer has a flipped y-axis
-        except:  # pylint: disable=bare-except
+        except Exception:
             # the downstream code defaults to center crop
             pass
 

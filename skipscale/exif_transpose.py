@@ -5,7 +5,7 @@ import functools
 from PIL import Image
 
 
-def image_transpose_exif(im):
+def image_transpose_exif(im: Image):
     """
     Apply Image.transpose to ensure 0th row of pixels is at the visual
     top of the image, and 0th column is the visual left-hand side.

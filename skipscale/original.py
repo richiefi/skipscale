@@ -1,4 +1,5 @@
 from starlette.exceptions import HTTPException
+from starlette.requests import Request
 from starlette.responses import Response
 
 from skipscale.urlcrypto import decrypt_url
@@ -15,7 +16,7 @@ from sentry_sdk import Hub
 log = get_logger(__name__)
 
 
-async def original(request):
+async def original(request: Request):
     """Return an image from the origin."""
 
     tenant = request.path_params["tenant"]
@@ -53,11 +54,13 @@ async def original(request):
     else:
         # If no origin is specified for the tenant, we expect encrypted urls.
         key = config.encryption_key(tenant)
+        if key is None:
+            raise HTTPException(400)
         try:
             request_url = decrypt_url(
                 key, tenant, image_uri.split(".")[0]
             )  # omit file extension from encrypted url
-        except:
+        except Exception:
             raise HTTPException(400)
         log.debug(
             "tenant %r: decrypted image_uri %r -> %r", tenant, image_uri, request_url
