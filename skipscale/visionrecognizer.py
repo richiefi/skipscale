@@ -7,7 +7,6 @@ from starlette.responses import Response, JSONResponse
 from skipscale.utils import (
     cache_url,
     cache_headers_with_config,
-    make_request,
     extract_forwardable_params,
 )
 from skipscale.config import Config

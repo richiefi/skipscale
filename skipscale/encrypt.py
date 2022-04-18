@@ -3,7 +3,7 @@ import base64
 import binascii
 from urllib.parse import urljoin
 
-from httpx import RequestError, AsyncClient
+from httpx import AsyncClient
 from schema import Schema, Optional, SchemaError
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
@@ -121,8 +121,7 @@ async def encrypt(request):
         image_encrypt_result = {}
         array_to_result(image_encrypt_result, body.get("urls", []))
         visionrecognizer_calls = []
-        for src_url in image_encrypt_result:
-            encrypted_url = image_encrypt_result[src_url]
+        for src_url, encrypted_url in image_encrypt_result.items():
             visionrecognizer_calls.append(visionrecognizer_call(src_url, encrypted_url))
         for visionrecognizer_result in await asyncio.gather(*visionrecognizer_calls):
             if "thumbnail_crop" in visionrecognizer_result:

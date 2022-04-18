@@ -1,7 +1,7 @@
 import base64
 from urllib.parse import quote
 
-from Cryptodome.Cipher import AES
+from Cryptodome.Cipher import AES, _mode_gcm
 from Cryptodome.Hash import SHA1
 
 
@@ -21,6 +21,8 @@ def encrypt_url(key: bytes, tenant: str, url: str) -> str:
         :12
     ]  # per-input stable nonce, truncated to 12 bytes
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce, mac_len=4)
+    if not isinstance(cipher, _mode_gcm.GcmMode):
+        raise ValueError("AES GCM mode not supported")
     cipher.update(tenant.encode("utf-8"))
     ciphertext, tag = cipher.encrypt_and_digest(url_bytes)
     payload = nonce + ciphertext + tag
@@ -33,6 +35,8 @@ def decrypt_url(key: bytes, tenant: str, ciphertext: str) -> str:
     plaintext = cipher_bytes[12:-4]
     tag = cipher_bytes[-4:]
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce, mac_len=4)
+    if not isinstance(cipher, _mode_gcm.GcmMode):
+        raise ValueError("AES GCM mode not supported")
     cipher.update(tenant.encode("utf-8"))
     url_bytes = cipher.decrypt_and_verify(
         plaintext, tag

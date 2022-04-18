@@ -2,7 +2,6 @@
 
 import logging
 import copy
-import asyncio
 from urllib.parse import urljoin, urlencode
 from typing import Optional, Union, Dict, List, Tuple
 

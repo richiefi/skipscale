@@ -34,7 +34,9 @@ def image_transpose_exif(im):
     ]
 
     try:
-        seq = exif_transpose_sequences[im._getexif()[exif_orientation_tag]]
+        seq = exif_transpose_sequences[
+            im._getexif()[exif_orientation_tag]  # pylint: disable=protected-access
+        ]
     except Exception:
         return im
     else:

@@ -8,6 +8,7 @@ pylint = "*"
 mypy = "*"
 pytest = "*"
 black = "*"
+types-toml = "*"
 
 [packages]
 pillow-simd = {version = "*", platform_machine = "== 'x86_64'"}

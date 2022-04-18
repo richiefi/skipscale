@@ -61,7 +61,7 @@ class Config:
     """Server configuration parsed from a TOML file."""
 
     def __init__(self):
-        with open(config_path) as f:
+        with open(config_path, encoding="UTF-8") as f:
             parsed_config = toml.load(f)
         self.validated_config = config_schema.validate(parsed_config)
 

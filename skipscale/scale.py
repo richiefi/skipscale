@@ -6,7 +6,7 @@ from io import BytesIO
 from PIL import Image
 from schema import Schema, And, Optional, Use
 from starlette.exceptions import HTTPException
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response
 
 from skipscale.exif_transpose import image_transpose_exif
 from skipscale.utils import (
@@ -79,7 +79,7 @@ query_schema = Schema(
             str,
             Use(lambda s: s.split(",")),
             Use(lambda l: map(int, l)),
-            Use(lambda l: tuple(l)),
+            Use(tuple),
         ),
     }
 )

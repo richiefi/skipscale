@@ -113,11 +113,11 @@ async def planner(request):
             q["center-y"] = (
                 1.0 - visionrecognizer_result["centerPoint"]["y"]
             )  # visionrecognizer has a flipped y-axis
-        except:  # the downstream code defaults to center crop
+        except:  # pylint: disable=bare-except
+            # the downstream code defaults to center crop
             pass
 
     scale_params = plan_scale(q, imageinfo, config.max_pixel_ratio(tenant))
-    scaling_requested = "width" in q or "height" in q
     size_identical = (
         scale_params["width"] == imageinfo["width"]
         and scale_params["height"] == imageinfo["height"]

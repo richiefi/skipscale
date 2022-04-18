@@ -5,7 +5,6 @@ import os
 
 import httpx
 import sentry_sdk
-import uvicorn.workers
 
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.applications import Starlette
@@ -104,10 +103,12 @@ app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=transport)
 
 if app_config.sentry_dsn():
     if app_config.sentry_traces_sample_rate():
-        sentry_sdk.init(
+        sentry_sdk.init(  # pylint: disable=abstract-class-instantiated; see https://github.com/getsentry/sentry-python/issues/1081
             dsn=app_config.sentry_dsn(),
             traces_sample_rate=app_config.sentry_traces_sample_rate(),
         )
     else:
-        sentry_sdk.init(dsn=app_config.sentry_dsn())
+        sentry_sdk.init(  # pylint: disable=abstract-class-instantiated
+            dsn=app_config.sentry_dsn()
+        )
     app.add_middleware(SentryAsgiMiddleware)

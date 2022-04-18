@@ -58,6 +58,7 @@ disable=
     broad-except,
     too-few-public-methods,
     missing-function-docstring,
+    missing-module-docstring,
     raise-missing-from,
     wrong-import-order,
     ungrouped-imports,
