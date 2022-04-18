@@ -82,7 +82,7 @@ async def make_request(
     if r.is_error:
         raise HTTPException(r.status_code)
 
-    if method == "GET" and r.status != 304 and not r.content:
+    if method == "GET" and r.status_code != 304 and not r.content:
         # No error, but we got no response body.
         sentry_sdk.set_context(
             "outbound_request",
