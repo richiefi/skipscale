@@ -92,7 +92,7 @@ async def make_request(
                 "response_headers": r.headers,
             },
         )
-        raise HTTPException(500, "empty body from upstream")
+        raise RuntimeError("empty body from upstream")
 
     return r
 
