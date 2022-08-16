@@ -1,4 +1,4 @@
-FROM python:3.10.4-bullseye
+FROM python:3.10.6-bullseye
 ARG CC=cc
 
 ENV WORKER_PROCESSES 16
@@ -10,9 +10,9 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE 1
 # Dummy env, increment to force builder to abandon apt cache
-ENV APTDATE 20220602
+ENV APTDATE 20220816
 
-ARG mozjpeg_tag=v4.0.3
+ARG mozjpeg_tag=v4.1.1
 
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install cmake nasm -y --no-install-recommends && \
