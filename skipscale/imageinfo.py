@@ -1,6 +1,9 @@
 from io import BytesIO
 
-from PIL import Image
+from PIL import Image as PILImage, UnidentifiedImageError
+from PIL.Image import Image
+
+from sentry_sdk import Hub
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
@@ -12,8 +15,6 @@ from skipscale.utils import (
     extract_forwardable_params,
 )
 from skipscale.config import Config
-
-from sentry_sdk import Hub
 
 
 async def imageinfo(request: Request):
@@ -47,6 +48,10 @@ async def imageinfo(request: Request):
         return Response(status_code=304, headers=output_headers)
 
     i = Image.open(BytesIO(r.content))
+
+    if i.format is None:
+        return Response(status_code=400, headers=output_headers)
+
     original_format = i.format
     i = image_transpose_exif(i)
     return JSONResponse(
