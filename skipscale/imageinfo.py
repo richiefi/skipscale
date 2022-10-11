@@ -47,7 +47,10 @@ async def imageinfo(request: Request):
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
 
-    i = Image.open(BytesIO(r.content))
+    try:
+        i: Image = PILImage.open(BytesIO(r.content))
+    except UnidentifiedImageError:
+        return Response(status_code=400, headers=output_headers)
 
     if i.format is None:
         return Response(status_code=400, headers=output_headers)
