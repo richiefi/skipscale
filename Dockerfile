@@ -1,4 +1,4 @@
-FROM python:3.10.6-bullseye
+FROM python:3.10.7-bullseye
 ARG CC=cc
 
 ENV WORKER_PROCESSES 16
