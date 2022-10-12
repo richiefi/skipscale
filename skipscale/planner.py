@@ -17,22 +17,32 @@ from sentry_sdk import Hub
 
 log = get_logger(__name__)
 
+dimensions_fields = {
+    Optional("width"): And(Use(int), lambda n: n >= 0),
+    Optional("height"): And(Use(int), lambda n: n >= 0),
+    Optional("dpr"): And(Use(int), lambda n: n > 0),  # display pixel/point ratio
+    Optional("mode"): And(
+        str, Use(str.lower), lambda s: s in ("fit", "crop", "stretch")
+    ),
+    Optional("center_x"): And(Use(float), lambda n: 0.0 <= n <= 1.0),
+    Optional("center_y"): And(Use(float), lambda n: 0.0 <= n <= 1.0),
+}
+
+additional_fields = {
+    Optional("size"): And(Use(int), lambda n: n >= 0),
+    Optional("quality"): And(Use(int), lambda n: 0 < n <= 100),
+    Optional("format"): And(
+        str, Use(str.lower), lambda s: s in ("jpeg", "png", "webp")
+    ),
+}
+
+dimensions_schema = Schema(
+    dimensions_fields,
+    ignore_extra_keys=True,
+)
+
 query_schema = Schema(
-    {
-        Optional("width"): And(Use(int), lambda n: n >= 0),
-        Optional("height"): And(Use(int), lambda n: n >= 0),
-        Optional("size"): And(Use(int), lambda n: n >= 0),
-        Optional("dpr"): And(Use(int), lambda n: n > 0),  # display pixel/point ratio
-        Optional("quality"): And(Use(int), lambda n: 0 < n <= 100),
-        Optional("mode"): And(
-            str, Use(str.lower), lambda s: s in ("fit", "crop", "stretch")
-        ),
-        Optional("format"): And(
-            str, Use(str.lower), lambda s: s in ("jpeg", "png", "webp")
-        ),
-        Optional("center-x"): And(Use(float), lambda n: 0.0 <= n <= 1.0),
-        Optional("center-y"): And(Use(float), lambda n: 0.0 <= n <= 1.0),
-    },
+    dimensions_fields | additional_fields,
     ignore_extra_keys=True,
 )
 
@@ -49,6 +59,11 @@ async def planner(request: Request):
         span.set_tag("tenant", tenant)
 
     in_q, fwd_q = extract_forwardable_params(dict(request.query_params))
+    if "center-x" in in_q:
+        in_q["center_x"] = in_q.pop("center-x")
+    if "center-y" in in_q:
+        in_q["center_y"] = in_q.pop("center-y")
+
     try:
         q = query_schema.validate(in_q)
     except Exception:
@@ -67,12 +82,20 @@ async def planner(request: Request):
     if "height" in q and q["height"] == 0:
         del q["height"]
 
-    if ("center-x" in q and "center-y" not in q) or (
-        "center-y" in q and "center-x" not in q
-    ):
-        raise HTTPException(400, "both center-x and center-y required")
+    # If mode=stretch but one of the dimensions is not set, force mode=fit
+    if q.get("mode") == "stretch":
+        if "width" not in q or "height" not in q:
+            q["mode"] = "fit"
 
-    if "center-x" in q and ("width" not in q or "height" not in q):
+    if ("center_x" in q and "center_y" not in q) or (
+        "center_y" in q and "center_x" not in q
+    ):
+        raise HTTPException(400, "both center_x and center_y required")
+
+    if "mode" not in q and "center_x" in q:
+        q["mode"] = "crop"
+
+    if q.get("mode") == "crop" and ("width" not in q or "height" not in q):
         raise HTTPException(400, "both width and height are required when cropping")
 
     imageinfo_url = cache_url(
@@ -93,7 +116,7 @@ async def planner(request: Request):
 
     if (
         "mode" in q
-        and (q["mode"] == "crop" and "center-x" not in q)
+        and (q["mode"] == "crop" and "center_x" not in q)
         and config.visionrecognizer_url() is not None
     ):
         # Crop requested but center point not specified. Perform feature detection.
@@ -110,45 +133,46 @@ async def planner(request: Request):
             if r.status_code == 304:
                 return Response(status_code=304, headers=output_headers)
             visionrecognizer_result = r.json()
-            q["center-x"] = visionrecognizer_result["centerPoint"]["x"]
-            q["center-y"] = (
+            q["center_x"] = visionrecognizer_result["centerPoint"]["x"]
+            q["center_y"] = (
                 1.0 - visionrecognizer_result["centerPoint"]["y"]
             )  # visionrecognizer has a flipped y-axis
         except Exception:
             # the downstream code defaults to center crop
             pass
 
-    scale_params = plan_scale(q, imageinfo, config.max_pixel_ratio(tenant))
+    scale_dimensions = plan_scale(
+        imageinfo["width"],
+        imageinfo["height"],
+        max_pixel_ratio=config.max_pixel_ratio(tenant),
+        **dimensions_schema.validate(q),
+    )
     size_identical = (
-        scale_params["width"] == imageinfo["width"]
-        and scale_params["height"] == imageinfo["height"]
+        scale_dimensions.width == imageinfo["width"]
+        and scale_dimensions.height == imageinfo["height"]
     )
 
     if "quality" in q:
-        scale_params["quality"] = q["quality"]
+        quality = q["quality"]
     else:
-        scale_params["quality"] = config.default_quality(tenant)
+        quality = config.default_quality(tenant)
 
     default_format = config.default_format(tenant)
     if "format" in q:
-        scale_params["format"] = q["format"]
+        format = q["format"]
     elif default_format and not size_identical:
         # Convert to default format if scaling, otherwise
         # allow grabbing the original size & format.
-        scale_params["format"] = default_format
+        format = default_format
     else:
-        scale_params["format"] = imageinfo["format"]
+        format = imageinfo["format"]
 
     if (
-        (
-            size_identical
-            and scale_params["format"] == imageinfo["format"]
-            and "quality" not in q
-        )
+        (size_identical and format == imageinfo["format"] and "quality" not in q)
         or (
-            imageinfo["format"] == "gif" and scale_params["format"] == "gif"
+            imageinfo["format"] == "gif" and format == "gif"
         )  # We don't process GIFs or PNGs unless format conversion is explicitly requested
-        or (imageinfo["format"] == "png" and scale_params["format"] == "png")
+        or (imageinfo["format"] == "png" and format == "png")
     ):
         # The request is best served by the original image, so redirect straight to that.
         original_url = cache_url(
@@ -166,14 +190,20 @@ async def planner(request: Request):
         )
         return RedirectResponse(original_url, headers=output_headers)
 
-    scale_params.update(fwd_q)
+    scale_params = {
+        "width": scale_dimensions.width,
+        "height": scale_dimensions.height,
+        "crop": f"{scale_dimensions.source_x},{scale_dimensions.source_y},{scale_dimensions.source_x2},{scale_dimensions.source_y2}",
+        "quality": quality,
+        "format": format,
+    }
     scale_url = cache_url(
         None,  # Get relative URL for redirect
         config.app_path_prefixes(),
         "scale",
         tenant,
         image_uri,
-        scale_params,
+        scale_params | fwd_q,
     )
     log.debug(
         "redirecting to scale request %s with input path %s",
