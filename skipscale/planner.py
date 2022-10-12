@@ -114,6 +114,25 @@ async def planner(request: Request):
 
     imageinfo = r.json()
 
+    if imageinfo["format"] == "svg":
+        if q.get("mode") == "crop" or "format" in q:
+            raise HTTPException(400, "cannot crop or convert SVG images")
+        # The request is best served by the original image, so redirect straight to that.
+        original_url = cache_url(
+            None,  # Get relative URL for redirect
+            config.app_path_prefixes(),
+            "original",
+            tenant,
+            image_uri,
+            fwd_q,
+        )
+        log.debug(
+            "redirecting to original request %s with input path %s",
+            original_url,
+            request.url.path,
+        )
+        return RedirectResponse(original_url, headers=output_headers)
+
     if (
         "mode" in q
         and (q["mode"] == "crop" and "center_x" not in q)

@@ -47,6 +47,17 @@ async def imageinfo(request: Request):
     if r.status_code == 304:
         return Response(status_code=304, headers=output_headers)
 
+    if r.headers.get("Content-Type") == "image/svg+xml":
+        return JSONResponse(
+            {
+                "width": 0,
+                "height": 0,
+                "format": "svg",
+                "size": len(r.content),
+            },
+            headers=output_headers,
+        )
+
     try:
         i: Image = PILImage.open(BytesIO(r.content))
     except UnidentifiedImageError:
