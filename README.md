@@ -38,10 +38,10 @@ This redirect is not intended to be served to the client, but instead captured a
 * `height`: Optional integer. Required when cropping. If not provided, the height of the returned image is unconstrained.
 * `dpr`: Display pixel/point ratio. Optional integer, defaults to 1. If set, `width` and `height` are multiplied by this value.
 * `quality`: Optional integer between 1 and 100. Default quality is 85; this can be overridden in the config file on a per-tenant basis. Applies to JPEG and lossy WebP files.
-* `mode`: Either `fit`, `crop` or `stretch`. Optional, defaults to `fit`. Setting this to `crop` equals setting both `center-x` and `center-y` to 0.5.
+* `mode`: Either `fit`, `crop` or `stretch`. Optional, defaults to `fit`. Setting this to `crop` equals setting both `center_x` and `center_y` to 0.5.
 * `format`: Either `jpeg`, `png` or `webp`. Optional, defaults to the format of the original image.
-* `center-x`: Focal point of the crop. Optional, a floating point number between 0.0 and 1.0. If set, `center-y` is also required. Implies `crop` mode.
-* `center-y`: Focal point of the crop. Optional, a floating point number between 0.0 and 1.0. If set, `center-x` is also required. Implies `crop` mode.
+* `center_x`: Focal point of the crop. Optional, a floating point number between 0.0 and 1.0. If set, `center_y` is also required. Implies `crop` mode.
+* `center_y`: Focal point of the crop. Optional, a floating point number between 0.0 and 1.0. If set, `center_x` is also required. Implies `crop` mode.
 
 ## Configuration file
 
