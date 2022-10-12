@@ -5,7 +5,7 @@ import copy
 from urllib.parse import urljoin, urlencode
 from typing import Optional, Union, Dict, List, Tuple
 
-from httpx import RequestError, AsyncClient
+from httpx import AsyncClient, RequestError, TimeoutException
 import sentry_sdk
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
@@ -73,8 +73,10 @@ async def make_request(
     )
     try:
         r = await client.send(req, stream=stream, follow_redirects=follow_redirects)
+    except TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout while fetching image")
     except RequestError:
-        raise HTTPException(502)
+        raise HTTPException(status_code=502, detail="Error while fetching image")
     finally:
         if close_client:
             await client.aclose()
