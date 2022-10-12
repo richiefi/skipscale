@@ -2,10 +2,11 @@
 
 import functools
 
-from PIL import Image
+from PIL import Image as PILImage
+from PIL.Image import Image
 
 
-def image_transpose_exif(im: Image):
+def image_transpose_exif(im: Image) -> Image:
     """
     Apply Image.transpose to ensure 0th row of pixels is at the visual
     top of the image, and 0th column is the visual left-hand side.
@@ -24,18 +25,18 @@ def image_transpose_exif(im: Image):
     exif_transpose_sequences = [  # Val  0th row  0th col
         [],  #  0    (reserved)
         [],  #  1   top      left
-        [Image.FLIP_LEFT_RIGHT],  #  2   top      right
-        [Image.ROTATE_180],  #  3   bottom   right
-        [Image.FLIP_TOP_BOTTOM],  #  4   bottom   left
-        [Image.FLIP_LEFT_RIGHT, Image.ROTATE_90],  #  5   left     top
-        [Image.ROTATE_270],  #  6   right    top
-        [Image.FLIP_TOP_BOTTOM, Image.ROTATE_90],  #  7   right    bottom
-        [Image.ROTATE_90],  #  8   left     bottom
+        [PILImage.FLIP_LEFT_RIGHT],  #  2   top      right
+        [PILImage.ROTATE_180],  #  3   bottom   right
+        [PILImage.FLIP_TOP_BOTTOM],  #  4   bottom   left
+        [PILImage.FLIP_LEFT_RIGHT, PILImage.ROTATE_90],  #  5   left     top
+        [PILImage.ROTATE_270],  #  6   right    top
+        [PILImage.FLIP_TOP_BOTTOM, PILImage.ROTATE_90],  #  7   right    bottom
+        [PILImage.ROTATE_90],  #  8   left     bottom
     ]
 
     try:
         seq = exif_transpose_sequences[
-            im._getexif()[exif_orientation_tag]  # pylint: disable=protected-access
+            im._getexif()[exif_orientation_tag]  # type: ignore
         ]
     except Exception:
         return im

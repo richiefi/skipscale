@@ -1,11 +1,15 @@
+from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Literal
 
 from skipscale.utils import get_logger
 
 log = get_logger(__name__)
 
 
-def bounding_box(max_width, max_height, original_width, original_height):
+def bounding_box(
+    max_width: int, max_height: int, original_width: int, original_height: int
+):
     """Figure out a size that fits in the requested box by maintaining original aspect
     ratio. If the requested width or height is 0, that dimension is unconstrainted."""
     if max_width == 0 or max_width > original_width:
@@ -13,15 +17,23 @@ def bounding_box(max_width, max_height, original_width, original_height):
     if max_height == 0 or max_height > original_height:
         max_height = original_height
     if original_width * max_height > max_width * original_height:
-        max_height = (max_width * original_height) / original_width
+        max_height = int(
+            Decimal((max_width * original_height) / original_width).quantize(
+                1, rounding=ROUND_HALF_UP
+            )
+        )
     else:
-        max_width = (max_height * original_width) / original_height
-    return int(Decimal(max_width).quantize(1, rounding=ROUND_HALF_UP)), int(
-        Decimal(max_height).quantize(1, rounding=ROUND_HALF_UP)
-    )
+        max_width = int(
+            Decimal((max_height * original_width) / original_height).quantize(
+                1, rounding=ROUND_HALF_UP
+            )
+        )
+    return max_width, max_height
 
 
-def crop_box(crop_width, crop_height, original_width, original_height):
+def crop_box(
+    crop_width: int, crop_height: int, original_width: int, original_height: int
+):
     """Using the aspect ratio of the crop, calculate the source box for the crop."""
     original_ratio = original_width / original_height
     crop_ratio = crop_width / crop_height
@@ -83,7 +95,7 @@ def select_span(cropped_length, original_length, center_point):
 
 def crop_origin(
     cropped_width, cropped_height, original_width, original_height, center_x, center_y
-):
+) -> tuple[int, int]:
     # Since we only crop to get to a specific aspect ratio, we only ever crop in one of the dimensions.
     if cropped_width < original_width:
         return select_span(cropped_width, original_width, center_x), 0
@@ -91,82 +103,92 @@ def crop_origin(
         return 0, select_span(cropped_height, original_height, center_y)
 
 
-def plan_scale(query, imageinfo, max_pixel_ratio=None):
-    if "dpr" in query:
-        if max_pixel_ratio and query["dpr"] > max_pixel_ratio:
+@dataclass(frozen=True)
+class ScaleDimensions:
+    width: int
+    height: int
+    source_x: int
+    source_y: int
+    source_x2: int
+    source_y2: int
+
+
+def plan_scale(
+    original_width: int,
+    original_height: int,
+    width: int | None = None,
+    height: int | None = None,
+    dpr: int | None = None,
+    mode: Literal["crop"] | Literal["fit"] | Literal["stretch"] | None = None,
+    center_x: float | None = None,
+    center_y: float | None = None,
+    max_pixel_ratio: int | None = None,
+) -> ScaleDimensions:
+
+    # Default source is the whole original image
+    source_x = 0
+    source_y = 0
+    source_x2 = original_width
+    source_y2 = original_height
+
+    if dpr is not None:
+        if max_pixel_ratio and dpr > max_pixel_ratio:
             dpr = max_pixel_ratio
-        else:
-            dpr = query["dpr"]
     else:
         dpr = 1
 
-    if "width" in query:
-        width = query["width"] * dpr
-        assert width >= 0, f"invalid width, query={query}"
+    if width is not None:
+        width = width * dpr
     else:
         width = 0
 
-    if "height" in query:
-        height = query["height"] * dpr
-        assert height >= 0, f"invalid height, query={query}"
+    if height is not None:
+        height = height * dpr
     else:
         height = 0
 
-    if "mode" in query and query["mode"] == "crop" and not "center-x" in query:
-        query["center-x"] = 0.5
-        query["center-y"] = 0.5
+    if mode == "crop" and center_x is None:
+        center_x = 0.5
 
-    do_stretch = query.get("mode") == "stretch"
-    if do_stretch and (width <= 0 or height <= 0):
-        # Avoid failing later on if clients send a silly combination of parameters
-        log.warning(
-            "plan_scale: invalid width/height with mode=stretch, "
-            "forcing fit mode (query: %s)",
-            query,
-        )
-        do_stretch = False
+    if mode == "crop" and center_y is None:
+        center_y = 0.5
 
-    if do_stretch:
+    if mode == "stretch":
         # Freeform scaling but clamped to original image dimensions
-        if width < imageinfo["width"]:
-            w = width
-        else:
-            w = imageinfo["width"]
-        if height < imageinfo["height"]:
-            h = height
-        else:
-            h = imageinfo["height"]
-        return {"width": w, "height": h}
-
-    if "center-x" not in query:
-        box_w, box_h = bounding_box(
-            width, height, imageinfo["width"], imageinfo["height"]
-        )
-        return {"width": box_w, "height": box_h}
-
-    # We are cropping, so the requested width/height describe both a bounding box *and* the requested aspect ratio.
-    cropped_width, cropped_height = crop_box(
-        width, height, imageinfo["width"], imageinfo["height"]
-    )
-    # The final dimensions are either the requested dimensions or the source crop dimensions, whichever are smaller.
-    scale_params = {}
-    if cropped_width > width or cropped_height > height:
-        scale_params["width"] = width
-        scale_params["height"] = height
+        if width > original_width:
+            width = original_width
+        if height > original_height:
+            height = original_height
+    elif mode == "fit" or mode is None:
+        # Fit mode
+        width, height = bounding_box(width, height, original_width, original_height)
     else:
-        scale_params["width"] = cropped_width
-        scale_params["height"] = cropped_height
-    crop = list(
-        crop_origin(
+        # We are cropping, so the requested width/height describe both a bounding box *and* the requested aspect ratio.
+        cropped_width, cropped_height = crop_box(
+            width, height, original_width, original_height
+        )
+        # The final dimensions are either the requested dimensions or the source crop dimensions, whichever are smaller.
+        if width > cropped_width or height > cropped_height:
+            width = cropped_width
+            height = cropped_height
+        source_x, source_y = crop_origin(
             cropped_width,
             cropped_height,
-            imageinfo["width"],
-            imageinfo["height"],
-            query["center-x"],
-            query["center-y"],
+            original_width,
+            original_height,
+            center_x,
+            center_y,
         )
+        source_x2 = source_x + (cropped_width - 1)
+        source_y2 = source_y + (cropped_height - 1)
+
+    scale_params = ScaleDimensions(
+        width=width,
+        height=height,
+        source_x=source_x,
+        source_y=source_y,
+        source_x2=source_x2,
+        source_y2=source_y2,
     )
-    crop.extend([crop[0] + (cropped_width - 1), crop[1] + (cropped_height - 1)])
-    scale_params["crop"] = ",".join(map(str, crop))
 
     return scale_params
