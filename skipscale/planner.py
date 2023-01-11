@@ -15,6 +15,9 @@ from skipscale.config import Config
 
 from sentry_sdk import Hub
 
+# Image formats which will not be scaled by default
+NONSCALED_FORMATS = frozenset(('gif', 'png'))
+
 log = get_logger(__name__)
 
 dimensions_fields = {
@@ -177,23 +180,28 @@ async def planner(request: Request):
         quality = config.default_quality(tenant)
 
     default_format = config.default_format(tenant)
+    is_nonscaled_source = imageinfo['format'] in NONSCALED_FORMATS
+
     if "format" in q:
         format = q["format"]
-    elif default_format and not size_identical:
+    elif default_format and not size_identical and not is_nonscaled_source:
         # Convert to default format if scaling, otherwise
         # allow grabbing the original size & format.
+        #
+        # Exception: if the original format is one of NONSCALED_FORMATS
+        # and an explicit target format is _not_ requested, then don't switch
+        # format to default. This prevents mangling graphics PNGs And
+        # animated GIFs if default_format is set.
         format = default_format
     else:
         format = imageinfo["format"]
 
-    if (
-        (size_identical and format == imageinfo["format"] and "quality" not in q)
-        or (
-            imageinfo["format"] == "gif" and format == "gif"
-        )  # We don't process GIFs or PNGs unless format conversion is explicitly requested
-        or (imageinfo["format"] == "png" and format == "png")
-    ):
+    if (size_identical and format == imageinfo["format"] and "quality" not in q) or \
+       (is_nonscaled_source and format in NONSCALED_FORMATS):
         # The request is best served by the original image, so redirect straight to that.
+        # This happens if either:
+        # a) no scaling or format/quality conversion would happen, or
+        # b) both the source and target formats are non-scaleable (see comment above).
         original_url = cache_url(
             None,  # Get relative URL for redirect
             config.app_path_prefixes(),
