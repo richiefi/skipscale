@@ -180,11 +180,13 @@ async def planner(request: Request):
         quality = config.default_quality(tenant)
 
     default_format = config.default_format(tenant)
+    force_default = config.force_default_format(tenant)
     is_nonscaled_source = imageinfo['format'] in NONSCALED_FORMATS
 
     if "format" in q:
         format = q["format"]
-    elif default_format and not size_identical and not is_nonscaled_source:
+    elif default_format and not size_identical and \
+         (not is_nonscaled_source or force_default):
         # Convert to default format if scaling, otherwise
         # allow grabbing the original size & format.
         #
@@ -192,6 +194,8 @@ async def planner(request: Request):
         # and an explicit target format is _not_ requested, then don't switch
         # format to default. This prevents mangling graphics PNGs And
         # animated GIFs if default_format is set.
+        log.debug('applying default format %s→%s (is_nonscaled_source=%s force_default=%s)',
+                  imageinfo['format'], default_format, is_nonscaled_source, force_default)
         format = default_format
     else:
         format = imageinfo["format"]
