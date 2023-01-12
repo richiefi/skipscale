@@ -156,7 +156,6 @@ def should_allow_cors(force_flag: bool, upstream_response) -> Union[dict, bool]:
 
     # If force is set in configuration, always return ACAO=*
     if force_flag:
-        log.debug("forcing ACAO")
         return True
 
     # Check if upstream returned ACAO and pass it on if it did

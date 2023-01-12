@@ -23,6 +23,7 @@ tenant_overrideable_fields = {
     schema.Optional("default_format"): schema.And(
         str, schema.Use(str.lower), lambda s: s in ("jpeg", "png", "webp")
     ),
+    schema.Optional("force_default_format"): bool,
     schema.Optional("max_pixel_ratio"): int,
     schema.Optional("cache_control_override"): str,
     schema.Optional("cache_control_minimum"): str,
@@ -225,6 +226,18 @@ class Config:
         Defaults to False."""
 
         result = self._optional_main_optional_tenant(tenant, "force_allow_cors")
+        if result is None:
+            result = False
+
+        return result
+
+    def force_default_format(self, tenant: str) -> bool:
+        """Returns True if default_format should be applied even to image formats
+        such as PNG/GIF that are otherwise expected to contain graphics/animations.
+
+        Defaults to False."""
+
+        result = self._optional_main_optional_tenant(tenant, "force_default_format")
         if result is None:
             result = False
 
