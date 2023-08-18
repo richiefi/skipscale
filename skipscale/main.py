@@ -103,10 +103,17 @@ app.state.httpx_client = httpx.AsyncClient(timeout=timeout, transport=transport)
 
 if app_config.sentry_dsn():
     if app_config.sentry_traces_sample_rate():
-        sentry_sdk.init(
-            dsn=app_config.sentry_dsn(),
-            traces_sample_rate=app_config.sentry_traces_sample_rate(),
-        )
+        if app_config.sentry_profiles_sample_rate():
+            sentry_sdk.init(
+                dsn=app_config.sentry_dsn(),
+                traces_sample_rate=app_config.sentry_traces_sample_rate(),
+                profiles_sample_rate=app_config.sentry_profiles_sample_rate(),
+            )
+        else:
+            sentry_sdk.init(
+                dsn=app_config.sentry_dsn(),
+                traces_sample_rate=app_config.sentry_traces_sample_rate(),
+            )
     else:
         sentry_sdk.init(dsn=app_config.sentry_dsn())
     app.add_middleware(SentryAsgiMiddleware)

@@ -20,6 +20,7 @@ origin_request_http2 = false # global, not overrideable by tenant, default false
 
 # sentry_dsn = "https://…" # enable sentry by configuring a dsn
 # sentry_traces_sample_rate = 0.2 # enable tracing by configuring a sample rate
+# sentry_profiles_sample_rate = 0.005 # enable profiling by configuring a sample rate, relative to the traces sample rate
 
 # enable vision recognizer integration by configuring these
 # visionrecognizer_url = "example.com" # ?url=image_url will be appended to the GET request

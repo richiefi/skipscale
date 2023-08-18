@@ -49,6 +49,7 @@ main_fields = {
     schema.Optional("origin_request_local_address"): str,
     schema.Optional("sentry_dsn"): str,
     schema.Optional("sentry_traces_sample_rate"): float,
+    schema.Optional("sentry_profiles_sample_rate"): float,
     schema.Optional("visionrecognizer_url"): str,
     schema.Optional("visionrecognizer_cache_endpoint"): str,
     schema.Optional("visionrecognizer_bearer_token"): str,
@@ -130,6 +131,11 @@ class Config:
     def sentry_traces_sample_rate(self) -> float:
         if "sentry_traces_sample_rate" in self.validated_config:
             return self.validated_config["sentry_traces_sample_rate"]
+        return 0.0
+
+    def sentry_profiles_sample_rate(self) -> float:
+        if "sentry_profiles_sample_rate" in self.validated_config:
+            return self.validated_config["sentry_profiles_sample_rate"]
         return 0.0
 
     def visionrecognizer_url(self) -> Optional[str]:
