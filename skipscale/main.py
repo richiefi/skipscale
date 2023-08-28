@@ -26,6 +26,7 @@ async def healthcheck(_):
 
 
 # pylint: disable=protected-access
+# TODO: Remove but check if pyvips has similar issues
 def monkeypatch_pil():
     # Pillow may use a buffer size (default ImageFile.MAXBLOCK == 65536 when writing this) that is too low
     # for some present-day JPEG images. Especially using 4:4:4 chroma subsampling with a JPEG quality

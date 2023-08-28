@@ -17,6 +17,8 @@ from skipscale.utils import (
 from skipscale.config import Config
 
 
+# TODO: Split for testability? Maybe typing is enough, if pyvips has it
+# TODO: Port to pyvips
 async def imageinfo(request: Request):
     """Return image dimensions, format and byte size."""
 

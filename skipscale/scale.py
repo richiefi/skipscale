@@ -24,6 +24,7 @@ from sentry_sdk import Hub
 log = get_logger(__name__)
 
 
+# TODO: Check if this is still needed with pyvips
 def jpegable_image(img: Image) -> Image:
     if img.mode in ("L", "RGB"):
         return img
@@ -40,6 +41,7 @@ def jpegable_image(img: Image) -> Image:
     return Image.alpha_composite(background, img).convert("RGB")
 
 
+# TODO: Port to pyvips
 def blocking_scale(content, q):
     i = Image.open(BytesIO(content))
     original_format = i.format

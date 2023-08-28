@@ -6,6 +6,7 @@ from PIL import Image as PILImage
 from PIL.Image import Image
 
 
+# TODO: See if this is still needed with pyvips
 def image_transpose_exif(im: Image) -> Image:
     """
     Apply Image.transpose to ensure 0th row of pixels is at the visual
