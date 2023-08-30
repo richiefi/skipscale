@@ -384,3 +384,12 @@ class ParsedCacheControl:
             self.storage = other.storage
 
         return self
+
+
+def vips_format_from_loader(img) -> str:
+    # vips does not have a way to get the file format, it tries different loaders until one works.
+    # So, the loader used is the closest we can get to the format. Usually the loader name starts
+    # with the file format, unless it's Imagemagick ("magick").
+    #
+    # This way gifload_buffer -> gif, jpegload_buffer -> jpeg, etc.
+    return img.get("vips-loader").split("load_")[0]
