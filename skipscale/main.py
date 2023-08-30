@@ -25,29 +25,6 @@ async def healthcheck(_):
     return Response(status_code=200)
 
 
-# pylint: disable=protected-access
-# TODO: Remove but check if pyvips has similar issues
-def monkeypatch_pil():
-    # Pillow may use a buffer size (default ImageFile.MAXBLOCK == 65536 when writing this) that is too low
-    # for some present-day JPEG images. Especially using 4:4:4 chroma subsampling with a JPEG quality
-    # less than 95 will end up with Pillow using too small buffers for the output.
-    #
-    # Increase MAXBLOCK to increase the smallest possible buffer size for saving images in Pillow.
-    from PIL import ImageFile
-
-    ImageFile.MAXBLOCK = 1024**3
-    # Also try to recover from semi-broken images. This fixes problems with some customers'
-    # image servers.
-    ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-    # Some combination of library and Pillow versions interprets JPEGs as MPOs.
-    # We don't ever expect to see MPO files, so monkeypatch Pillow to disable the detection
-    # completely.
-    from PIL import JpegImagePlugin
-
-    JpegImagePlugin._getmp = lambda _: None  # type: ignore
-
-
 routes = [
     # Used for original images
     Route("/original/{tenant}/{image_uri:path}", original, methods=["GET", "OPTIONS"]),
@@ -73,8 +50,6 @@ if os.environ.get("SKIPSCALE_DEBUG") == "1":
 else:
     log.setLevel(logging.INFO)
 log.debug("app starting")
-
-monkeypatch_pil()
 
 app_config = Config()
 final_routes = []
