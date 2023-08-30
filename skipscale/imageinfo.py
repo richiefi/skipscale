@@ -1,24 +1,18 @@
-from io import BytesIO
-
-from PIL import Image as PILImage, UnidentifiedImageError
-from PIL.Image import Image
-
+from pyvips import Image
 from sentry_sdk import Hub
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
-from skipscale.exif_transpose import image_transpose_exif
 from skipscale.utils import (
     cache_url,
     cache_headers_with_config,
     make_request,
     extract_forwardable_params,
+    vips_format_from_loader,
 )
 from skipscale.config import Config
 
 
-# TODO: Split for testability? Maybe typing is enough, if pyvips has it
-# TODO: Port to pyvips
 async def imageinfo(request: Request):
     """Return image dimensions, format and byte size."""
 
@@ -61,15 +55,12 @@ async def imageinfo(request: Request):
         )
 
     try:
-        i: Image = PILImage.open(BytesIO(r.content))
-    except UnidentifiedImageError:
+        i = Image.new_from_buffer(r.content, "")
+    except Exception:
         return Response(status_code=400, headers=output_headers)
+    i = i.autorot()  # rotate based on EXIF orientation
+    original_format = vips_format_from_loader(i)
 
-    if i.format is None:
-        return Response(status_code=400, headers=output_headers)
-
-    original_format = i.format
-    i = image_transpose_exif(i)
     return JSONResponse(
         {
             "width": i.width,
