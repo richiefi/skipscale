@@ -12,7 +12,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Dummy env, increment to force builder to abandon apt cache
 ENV APTDATE 20220816
 
-ARG mozjpeg_tag=v4.1.1
+ARG mozjpeg_tag=v4.1.4
 
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install cmake nasm meson libgirepository1.0-dev libfftw3-dev liborc-0.4-dev -y --no-install-recommends && \
