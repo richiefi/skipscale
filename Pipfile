@@ -20,8 +20,7 @@ gunicorn = "*"
 validators = "*"
 sentry-sdk = "*"
 httptools = "*"
-pillow-simd = {version = "*", platform_machine = "== 'x86_64'"}
-pillow = {version = "*", platform_machine = "!= 'x86_64'"}
+pyvips = "*"
 httpx = {extras = [ "http2",], version = "*"}
 
 [requires]
