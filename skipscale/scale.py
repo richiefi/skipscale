@@ -1,21 +1,20 @@
 import asyncio
 import concurrent.futures
 import functools
-from io import BytesIO
 
-from PIL import Image
+from pyvips import Image
 from schema import Schema, And, Optional, Use
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
-from skipscale.exif_transpose import image_transpose_exif
 from skipscale.utils import (
     cache_url,
     cache_headers_with_config,
     make_request,
     get_logger,
     extract_forwardable_params,
+    vips_format_from_loader,
 )
 from skipscale.config import Config
 
@@ -24,48 +23,44 @@ from sentry_sdk import Hub
 log = get_logger(__name__)
 
 
-def jpegable_image(img: Image) -> Image:
-    if img.mode in ("L", "RGB"):
-        return img
-
-    if img.mode == "1":
-        return img.convert("L")
-
-    # If not a color image with an alpha channel, convert directly to RGB
-    if img.mode != "RGBA":
-        return img.convert("RGB")
-
-    # Image with alpha, composite on white background
-    background = Image.new("RGBA", img.size, (255, 255, 255))
-    return Image.alpha_composite(background, img).convert("RGB")
-
-
 def blocking_scale(content, q):
-    i = Image.open(BytesIO(content))
-    original_format = i.format
-    i = image_transpose_exif(i)
-    i = i.resize((q["width"], q["height"]), Image.LANCZOS, q["crop"], reducing_gap=3.0)
-    if q["format"] == "jpeg":
-        i = jpegable_image(i)
-        params = {
-            "format": "JPEG",
-            "quality": q["quality"],
-            "optimize": True,
-            "progressive": True,
-        }
-        if q["quality"] >= 90:
-            params["subsampling"] = "4:4:4"
-    elif q["format"] == "png":
-        params = {"format": "PNG", "optimize": True}
-    elif q["format"] == "webp":
-        if original_format == "PNG":
-            params = {"format": "WEBP", "lossless": True, "quality": 100}
-        else:
-            params = {"format": "WEBP", "quality": q["quality"], "method": 6}
-    fp = BytesIO()
-    i.save(fp, **params)
-    fp.seek(0)
-    return fp.read()
+    i = Image.new_from_buffer(content, "")
+    i = i.autorot()  # rotate based on EXIF orientation
+    original_format = vips_format_from_loader(i)
+    if q["crop"]:
+        crop_left, crop_top, crop_right, crop_bottom = q["crop"]
+        crop_width = crop_right - crop_left
+        crop_height = crop_bottom - crop_top
+        i = i.extract_area(crop_left, crop_top, crop_width, crop_height)
+    i = i.thumbnail_image(q["width"], height=q["height"], size="both", linear=False)
+    match q["format"].lower():
+        case "jpeg":
+            return i.jpegsave_buffer(
+                Q=q["quality"],
+                optimize_coding=True,
+                interlace=True,
+                trellis_quant=True,
+                overshoot_deringing=True,
+                optimize_scans=True,
+                quant_table=3,
+                subsample_mode="auto",  # with this, chroma subsampling is disabled with quality >= 90
+                strip=True,
+            )
+        case "png":
+            return i.pngsave_buffer(
+                compression=9,  # max
+                effort=10,  # max
+                strip=True,
+            )
+        case "webp":
+            return i.webpsave_buffer(
+                lossless=(original_format == "png"),
+                Q=100 if original_format == "png" else q["quality"],
+                effort=6,
+                strip=True,
+            )
+        case _:
+            raise ValueError(f"unsupported format: {q['format']}")
 
 
 bg_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
