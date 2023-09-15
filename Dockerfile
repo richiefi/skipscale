@@ -1,4 +1,4 @@
-FROM python:3.10.7-bullseye
+FROM python:3.10.13-bullseye
 ARG CC=cc
 
 ENV WORKER_PROCESSES 16
@@ -10,11 +10,11 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE 1
 # Dummy env, increment to force builder to abandon apt cache
-ENV APTDATE 20220816
+ENV APTDATE 20230915
 
 ARG mozjpeg_tag=v4.1.4
 
-RUN apt-get update && apt-get upgrade -y && \
+RUN apt-get update && apt-get dist-upgrade -y && \
     apt-get install cmake nasm meson libgirepository1.0-dev libfftw3-dev liborc-0.4-dev -y --no-install-recommends && \
     rm -rf /tmp/* && rm -rf /var/cache/apt/archives/*.deb && rm -rf /var/lib/apt/lists/*
 
